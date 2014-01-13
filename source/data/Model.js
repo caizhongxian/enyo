@@ -157,8 +157,28 @@
 		*/
 		get: function (prop) {
 			if (this.attributes) {
-				var fn = this.attributes[prop];
-				return (fn && "function" == typeof fn)? fn.call(this): fn;
+				if (prop.indexOf(".") >= 0) {
+					var parts = prop.split(".");
+					var part = parts.shift();
+					var next = this;
+
+					do {
+						next = next.get? next.get(part): next[part];
+					} while ((part = parts.shift()) && next);
+					
+					if (parts.length === 0) {
+						if (next && enyo.isFunction(next)) {
+							return next.call(this);
+						}
+						
+						else return next;
+					}
+				}
+				
+				else {
+					var ret = this.attributes[prop];
+					return (ret && enyo.isFunction(ret)? ret.call(this): ret);
+				}
 			}
 		},
 		//*@public
