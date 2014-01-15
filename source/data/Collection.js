@@ -629,6 +629,43 @@ enyo.kind({
 		s = this.store = s || enyo.store;
 		s.addCollection(this);
 	},
+	observers: {
+		_relationChanged: ["relation"]	
+	},
+	_relationChanged: function () {
+		var relation = this.relation;
+		
+		if (relation && this.length && (!relation.isOwner || relation.inverseKey)) {
+			enyo.forEach(this.records, function (rec) {
+				// @TODO!
+			}, this);
+		}
+	},
+	_activeFilterChanged: function () {
+		var fn = this.activeFilter,
+			m  = this.filters;
+		// we do this so any other registered listeners will know this event
+		// was fired instead of calling it directly
+		if (fn && m && m[fn]) {
+			this.triggerEvent("filter");
+		} else { this.reset(); }
+	},
+	_filterContent: function () {
+		if (!this.filtering && (this.length || (this._uRecords && this._uRecords.length))) {
+			var fn = this.filters[this.activeFilter];
+			if (fn && this[fn]) {
+				this.filtering = true;
+				this.silence();
+				var r = this[fn]();
+				this.unsilence();
+				if (r) {
+					this.reset(true === r? undefined: r);
+				}
+				this.filtering = false;
+				if (this._uRecords && this._uRecords.length) { this.filtered = true; }
+			}
+		}
+	},
 	_recordChanged: function (rec, e, p) {
 		// TODO: this will be used internally for relational data structures
 		// if the developer provided a _recordChanged_ method we need to call

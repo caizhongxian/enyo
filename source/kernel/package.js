@@ -4,6 +4,7 @@ enyo.depends(
 	"dev.js",
 	"job.js",
 	"Oop.js",
+	"LinkedList.js",
 	"Binding.js",
 	"mixins",
 	"Object.js",
