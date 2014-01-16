@@ -1,84 +1,118 @@
 (function (enyo) {
-	var kind = enyo.kind;
 	
-	//*@public
+	var kind = enyo.kind
+		, mixin = enyo.mixin
+		, constructorForKind = enyo.constructorForKind
+		, isObject = enyo.isObject;
+	
 	/**
-		This is an abstract kind used with [linked lists](#enyo.LinkedList). This should
-		be subclassed for useful implementations.
+		@public
+		@class
 	*/
 	kind({
+		
 		name: "enyo.LinkedListNode",
-		//*@protected
 		kind: null,
 		noDefer: true,
-		//* The previous node in the list
+		
+		/**
+			@private
+		*/
 		prev: null,
-		//* The next node in the list
+		
+		/**
+			@private
+		*/
 		next: null,
+		
+		/**
+			@public
+			@method
+		*/
 		copy: function () {
-			var cpy = new this.constructor();
+			var cpy = new this.ctor();
 			cpy.prev = this.prev;
 			cpy.next = this.next;
 			return cpy;
 		},
+		
+		/**
+			@private
+			@method
+		*/
 		constructor: function (props) {
-			if (props) {
-				enyo.mixin(this, props);
-			}
+			props && mixin(this, props);
 		},
+		
+		/**
+			@private
+			@method
+		*/
 		destroy: function () {
 			// clear reference to previous node
 			this.prev = null;
 			
 			// if we have a reference to our next node
 			// we continue down the chain
-			if (this.next) {
-				this.next.destroy();
-			}
+			this.next && this.next.destroy();
 			
 			// clear our reference to the next node
 			this.next = null;
 		}
 	});
 
-	//*@public
 	/**
-		An abstract kind used for linkable/chainable objects. Can be subclassed for various
-		purposes from the simple linked-list api.
+		@public
+		@class
 	*/
 	kind({
+		
 		name: "enyo.LinkedList",
-		//*@protected
 		kind: null,
 		noDefer: true,
-		//*@public
+		
+		/**
+			@public
+		*/
 		nodeKind: enyo.LinkedListNode,
+		
+		/**
+			@private
+		*/
 		head: null,
+		
+		/**
+			@private
+		*/
 		tail: null,
+		
+		/**
+			@public
+		*/
 		length: 0,
-		//* Reset the list by destroying all nodes.
+		
+		/**
+			@public
+			@method
+		*/
 		clear: function () {
-			var head = this.head;
-			if (head) {
+			if (this.head) {
 				// this will trigger a chain event down the list
-				head.destroy();
+				this.head.destroy();
 			}
 			this.head = null;
 			this.tail = null;
 			this.length = 0;			
 		},
+		
 		/**
+			@public
+			@method
 		*/
 		slice: function (fromNode, toNode) {
-			
-			// we start from the past in node or our head
-			var node = fromNode || this.head;
-			
-			// placeholder for node copy
-			var cpy;
-			
-			// ensure the new list is the same type as this list
-			var list = new this.constructor();
+			var node = fromNode || this.head
+				, list = new this.ctor()
+				, cpy;
 			
 			// ensure we have a final node or our tail
 			toNode = toNode || this.tail;
@@ -92,38 +126,60 @@
 			
 			return list;
 		},
-		//* Free the entire list.
+		
+		/**
+			@public
+			@method
+		*/
 		destroy: function () {
 			this.clear();
 			this.destroyed = true;
 		},
-		//* Create an instance of this list's _nodeKind_ but does not add it.
-		createNode: function (props) {
-			var ctor = this.nodeKind;
-			return new ctor(props);
-		},
+		
 		/**
+			@public
+			@method
+		*/
+		createNode: function (props) {
+			return new this.nodeKind(props);
+		},
+		
+		/**
+			@public
+			@method
 		*/
 		deleteNode: function (node) {
-			var prev = node.prev;
-			var next = node.next;
-			if (prev) {
-				prev.next = next;
-			}
-			if (next) {
-				next.prev = prev;
-			}
-			this.length--;
-			node.next = node.prev = null;
-
+			this.removeNode(node);
+			
 			// can't chain destruct because we removed its chain references
 			node.destroy();
 			return this;
 		},
+		
 		/**
+			@public
+			@method
+		*/
+		removeNode: function (node) {
+			var prev = node.prev
+				, next = node.next;
+				
+			prev && prev.next = next;
+			next && next.prev = prev;
+			this.length--;
+			node.next = node.prev = null;
+			return this;
+		},
+		
+		/**
+			@public
+			@method
 		*/
 		appendNode: function (node, targetNode) {
+			isObject(node) && (node = this.createNode(node));
+			
 			targetNode = targetNode || this.tail;
+			
 			if (targetNode) {
 				
 				// if we're injecting in the middle we need to update the
@@ -161,7 +217,10 @@
 			}
 			return this;
 		},
+		
 		/**
+			@public
+			@method
 		*/
 		findNode: function (fn, ctx, targetNode) {
 			var node = targetNode || this.head;
@@ -175,7 +234,10 @@
 			// if no node qualified it returns false
 			return false;
 		},
+		
 		/**
+			@public
+			@method
 		*/
 		forward: function (fn, ctx, targetNode) {
 			var node = targetNode || this.head;
@@ -189,7 +251,10 @@
 			// returns the last node (if any) that was processed in the chain
 			return node;
 		},
+		
 		/**
+			@public
+			@method
 		*/
 		backward: function (fn, ctx, targetNode) {
 			var node = targetNode || this.tail;
@@ -202,6 +267,14 @@
 			}
 			// returns the last node (if any) that was processed in the chain
 			return node;
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		constructor: function () {
+			this.nodeType = constructorForKind(this.nodeType);
 		}
 	});
 

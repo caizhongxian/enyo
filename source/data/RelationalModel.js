@@ -110,6 +110,30 @@
 				
 				model.attributes[key] = col;
 			}
+		},
+		recordChanged: function (col, e, changed) {
+			var model = this.instance
+				, isOwner = this.isOwner
+				, key = this.key;
+			
+			if (isOwner) {
+				model.dirty = true;
+				model.changed[key] = col;
+				model.triggerEvent("change", changed);
+				model.changed = {};
+			}
+		},
+		recordDestroyed: function (col, e, changed) {
+			var model = this.instance
+				, isOwner = this.isOwner
+				, key = this.key;
+				
+			if (isOwner) {
+				model.dirty = true;
+				model.changed[key] = col;
+				model.triggerEvent("change", changed);
+				model.changed = {};
+			}
 		}
 	});
 	
