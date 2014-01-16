@@ -60,20 +60,18 @@
 			var records = this.records
 				, created = this.created
 				, added;
-				
-			if((added = records.add(record)).length) {
-				forEach(added, function (rec) {
-					rec.on("change", this.onChange);
-					rec.on("destroy", this.onDestroy);
-					if (rec.isNew) {
-						created.add(rec);
-						this.isDirty = true;
-					}
-				}, this);
-				
-				this.set("length", records.length);
+			
+			!this.has(record) && records.add(record);
+			
+			record.on("change", this.onChange);
+			record.on("destroy", this.onDestroy);
+			
+			if (record.isNew) {
+				created.add(record);
+				this.isDirty = true;
 			}
 			
+			this.length = records.length;
 			return this;
 		},
 		

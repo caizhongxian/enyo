@@ -2,10 +2,11 @@
 	
 	var bind = enyo.bindSafely
 		, isString = enyo.isString
-		, isFunction = enyo.isFunction
 		, forEach = enyo.forEach
 		, indexOf = enyo.indexOf
 		, toArray = enyo.toArray
+		, find = enyo.find
+		, filter = enyo.filter
 		, uid = enyo.uid
 		, eventTable = {};
 	
@@ -13,28 +14,14 @@
 		@private
 	*/
 	function addListener(e, fn, ctx) {
-		var listeners = this.listeners(e);
+
+		this.listeners().push({
+			event: e,
+			fn: fn,
+			ctx: ctx || this
+		});
 		
-		if (isString(fn)) {
-			if (!ctx) {
-				throw "enyo.RegisteredEventSupport.addListener: must supply a valid function " +
-					"or if a string must supply a context"
-			}
-			
-			fn = ctx[fn];
-		}
-		
-		if (!isFunction(fn)) {
-			throw "enyo.EventEmitter.addListener: could not find or use supplied method";
-		}
-		
-		fn = ctx? bind(ctx, fn): fn;
-		
-		if (!listeners.length || indexOf(fn, listeners) < 0) {
-			listeners.push(fn);
-		}
-		
-		return fn;
+		return this;
 	}
 	
 	/**
@@ -54,8 +41,8 @@
 				args = [this, e];
 			}
 			
-			forEach(listeners, function (fn) {
-				fn.apply(dit, args);
+			forEach(listeners, function (ln) {
+				ln.fn.apply(ln.ctx, args);
 			});
 			
 			return true;
@@ -129,11 +116,13 @@
 			@method
 		*/
 		removeListener: function (e, fn) {
-			var listeners = this.listeners(e)
+			var listeners = this.listeners()
 				, idx;
 			
 			if (listeners.length) {
-				idx = indexOf(fn, listeners);
+				idx = find(listeners, function (ln) {
+					return ln.fn === fn;
+				});
 				idx >= 0 && listeners.splice(idx, 1);
 			}
 			return this;
@@ -144,13 +133,17 @@
 			@method
 		*/
 		removeAllListeners: function (e) {
-			var eid;
+			var eid = this.eventId
+				, loc = eid && eventTable[eid];
 			
-			if (e) {
-				this.listeners(e).length = 0;
-			} else {
-				 eid = this.eventId || (this.eventId = uid("__eventId__"))
-				 eventTable[eid] = null;
+			if (loc) {
+				if (e) {
+					eventTable[eid] = filter(loc, function (ln) {
+						return ln.event != e;
+					});
+				} else {
+					eventTable[eid] = null;
+				}
 			}
 			
 			return this;
@@ -161,21 +154,12 @@
 			@method
 		*/
 		listeners: function (e) {
-			var eid = this.eventId
-				, loc;
+			var eid = this.eventId || (this.eventId = uid("__eventId__"))
+				, loc = eventTable[eid] || (eventTable[eid] = []);
 			
-			// ensure we have an event id for the object instance
-			eid || (eid = this.eventId = uid("__eventId__"));
-			
-			// we will create an entry in the map if it doesn't exist
-			// so we won't have to do this again later or create an
-			// array for no reason
-			loc = eventTable[eid] || (eventTable[eid] = {});
-			
-			// ensure we will always return an array and if we don't have
-			// listeners we will store the array in case we need it again
-			// later
-			return loc[e] || (loc[e] = []);
+			return !e? loc.length? loc.slice(): loc: filter(loc, function (ln) {
+				return ln.event == e;
+			});
 		},
 		
 		/**

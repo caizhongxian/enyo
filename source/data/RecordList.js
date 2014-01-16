@@ -19,50 +19,28 @@
 			@private
 			@method
 		*/
-		add: function (records) {
+		add: function (record) {
 			var loc = this.euidTable
-				, added = []
-				, dit = this
-				, euid, node;
-			
-			var fn = function (rec) {
-				if (!dit.has(rec)) {
-					euid = rec.euid;
-					node = dit.createNode({model: rec});
-					dit.appendNode(node);
-					loc[euid] = node;
-					added.push(rec);
-				}
-			};
-						
-			isArray(records)? forEach(records, fn): fn(records);
-			
-			return added;
+				, euid = record.euid
+				, node = this.createNode({model: record});
+
+			this.appendNode((loc[euid] = node));
+			return this;
 		},
 		
 		/**
 			@private
 			@method
 		*/
-		remove: function (records) {
+		remove: function (record) {
 			var loc = this.euidTable
-				, len = this.length
-				, dit = this
-				, removed = []
-				, node, euid;
+				, node = this.has(record)
+				, euid = record.euid;
 			
-			var fn = function (rec) {
-				if ((node = dit.has(rec))) {
-					euid = rec.euid;
-					dit.deleteNode(node);
-					delete loc[euid];
-					removed.push(rec);
-				}
-			};
+			node && this.deleteNode(node);
 			
-			isArray(records)? forEach(records, fn): fn(records);
-			
-			return removed;
+			delete loc[euid];
+			return this;
 		},
 		
 		/**
@@ -70,11 +48,11 @@
 			@method
 		*/
 		records: function () {
-			var recs = [];
+			var ret = [];
 			this.forward(function (node) {
-				recs.push(node.model);
+				ret.push(node.model);
 			});
-			return recs;
+			return ret;
 		},
 		
 		/**

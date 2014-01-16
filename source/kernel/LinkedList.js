@@ -176,8 +176,6 @@
 			@method
 		*/
 		appendNode: function (node, targetNode) {
-			isObject(node) && (node = this.createNode(node));
-			
 			targetNode = targetNode || this.tail;
 			
 			if (targetNode) {
@@ -222,7 +220,7 @@
 			@public
 			@method
 		*/
-		findNode: function (fn, ctx, targetNode) {
+		find: function (fn, ctx, targetNode) {
 			var node = targetNode || this.head;
 			if (node) {
 				do {

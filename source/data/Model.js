@@ -35,17 +35,18 @@
 			// ensure we have a unique identifier that could potentially
 			// be used in remote systems
 			this.euid = uuid();
-			
+
 			// if necessary we need to parse the incoming attributes
 			attrs = attrs? this.parse(attrs): null;
 			
 			// ensure we have the updated attributes
 			this.attributes = this.attributes? clone(this.attributes): {};
 			attrs && mixin(this.attributes, attrs);
-			
+
 			// now we need to ensure we have a store and register with it
-			this.store = isString(this.store)? getPath(this.store): this.store || enyo.store;
-			
+			// this.store = isString(this.store)? getPath(this.store): this.store || enyo.store;
+			this.store = this.store || enyo.store;
+
 			if (!opts || !opts.noAdd) {
 				this.store.add(this);
 			}
