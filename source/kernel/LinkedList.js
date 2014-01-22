@@ -179,38 +179,22 @@
 			targetNode = targetNode || this.tail;
 			
 			if (targetNode) {
-				
-				// if we're injecting in the middle we need to update the
-				// next reference of the new node
 				if (targetNode.next) {
 					node.next = targetNode.next;
 				}
 				
-				// now point the next from target to the new injected node
 				targetNode.next = node;
-				
-				// now update the prev reference node to the target node from
-				// the new node
 				node.prev = targetNode;
 				
-				// in cases where the target node was the end of the list
-				// we update our tail
 				if (targetNode === this.tail) {
 					this.tail = node;
 				}
 				
-				// and of course update our length
 				this.length++;
 			} else {
 				
-				// we had no nodes so the head is the tail
 				this.head = this.tail = node;
-				
-				// clear these references as its possible to have a node from
-				// another list
 				node.prev = node.next = null;
-				
-				// we have a fixed length in this case
 				this.length = 1;
 			}
 			return this;

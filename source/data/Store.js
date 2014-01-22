@@ -57,14 +57,19 @@
 			@method
 		*/
 		add: function (record) {
+			// @TODO: It should be possible to have a mechanism that delays this
+			// work until a timer runs out (that is reset as long as add is continuing
+			// to be called) and then flushes when possible unless a synchronous flush
+			// is forced?
+			
 			var records = this.records
 				, created = this.created
 				, added;
 			
 			!this.has(record) && records.add(record);
 			
-			record.on("change", this.onChange);
-			record.on("destroy", this.onDestroy);
+			record.on("change", this.onChange)
+				  .on("destroy", this.onDestroy);
 			
 			if (record.isNew) {
 				created.add(record);
@@ -80,16 +85,24 @@
 			@method
 		*/
 		remove: function (record) {
-			var records = this.records
-				, removed;
 			
-			if((removed = records.remove(record)).length) {
-				forEach(removed, function (rec) {
-					rec.removeListener("change", this.onChange);
-					rec.removeListener("destroy", this.onDestroy);
-				}, this);
+			var records = this.records
+				, created = this.created
+				, destroyed = this.destroyed;
 				
-				this.set("length", records.length);
+			if (this.has(record)) {
+				records.remove(record);
+				
+				if (record.isNew) {
+					created.remove(record);
+				} else {
+					destroyed.add(record);
+				}
+				
+				record.removeListener("change", this.onChange)
+					  .removeListener("destroy", this.onDestroy);
+					  
+			  this.length = records.length;
 			}
 			
 			return this;

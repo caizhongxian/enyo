@@ -7,7 +7,7 @@
 		, toArray = enyo.toArray
 		, find = enyo.find
 		, filter = enyo.filter
-		, uid = enyo.uid
+		, uuid = enyo.uuid
 		, eventTable = {};
 	
 	/**
@@ -133,16 +133,16 @@
 			@method
 		*/
 		removeAllListeners: function (e) {
-			var eid = this.eventId
-				, loc = eid && eventTable[eid];
+			var euid = this.euid
+				, loc = euid && eventTable[euid];
 			
 			if (loc) {
 				if (e) {
-					eventTable[eid] = filter(loc, function (ln) {
+					eventTable[euid] = filter(loc, function (ln) {
 						return ln.event != e;
 					});
 				} else {
-					eventTable[eid] = null;
+					eventTable[euid] = null;
 				}
 			}
 			
@@ -154,10 +154,10 @@
 			@method
 		*/
 		listeners: function (e) {
-			var eid = this.eventId || (this.eventId = uid("__eventId__"))
-				, loc = eventTable[eid] || (eventTable[eid] = []);
+			var euid = this.euid || (this.euid = uuid())
+				, loc = eventTable[euid] || (eventTable[euid] = []);
 			
-			return !e? loc.length? loc.slice(): loc: filter(loc, function (ln) {
+			return !e? loc: filter(loc, function (ln) {
 				return ln.event == e;
 			});
 		},

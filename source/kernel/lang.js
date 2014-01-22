@@ -300,12 +300,14 @@
 	enyo.isArray = Array.isArray || function(it) {
 		return toString.call(it) === "[object Array]";
 	};
+	var isArray = enyo.isArray;
 
 	//* Returns true if the argument is an object.
 	enyo.isObject = Object.isObject || function (it) {
 		// explicit null/undefined check for IE8 compatibility
 		return (it != null) && (toString.call(it) === "[object Object]");
 	};
+	var isObject = enyo.isObject;
 
 	//* Returns true if the argument is true.
 	enyo.isTrue = function(it) {
@@ -392,6 +394,7 @@
 			}
 		}
 	};
+	var forEach = enyo.forEach;
 
 	/**
 		Invokes _inFunc_ on each element of _inArray_, and returns the results as an Array.
@@ -768,6 +771,12 @@
 
 	//* @protected
 	var empty = {};
+	//* @protected
+	var mixinDefaults = {
+		exists: false,
+		ignore: false,
+		filter: null
+	};
 
 	//* @public
 	/**
@@ -796,48 +805,48 @@
 
 		Setting _options_ to true will set all options to true.
 	*/
-	enyo.mixin = function(target, source, options) {
-		// the return object/target
-		var t;
-		// the source or sources to use
-		var s;
-		var o, i, n, s$;
-		if (enyo.isArray(target)) {
-			t = {};
-			s = target;
-			if (source && enyo.isObject(source)) {
-				o = source;
-			}
+	var mixin = function () {
+		var ret = arguments[0]
+			, src = arguments[1]
+			, opts = arguments[2]
+			, val;
+		
+		if (!ret) {
+			ret = {};
+		} else if (isArray(ret)) {
+			opts = src;
+			src = ret;
+			ret = {};
+		}
+		
+		if (!opts || opts === true) {
+			opts = mixinDefaults;
+		}
+
+		if (isArray(src)) {
+			forEach(src, function (it) {
+				mixin(ret, it, opts);
+			});
 		} else {
-			t = target || {};
-			s = source;
-			o = options;
-		}
-		if (!enyo.isObject(o)) {
-			o = {};
-		}
-		if (true === options) {
-			o.ignore = true;
-			o.exists = true;
-		}
-		// here we handle the array of sources
-		if (enyo.isArray(s)) {
-			for (i=0; (s$=s[i]); ++i) {
-				enyo.mixin(t, s$, o);
-			}
-		} else {
-		// otherwise we execute singularly
-			for (n in s) {
-				s$ = s[n];
-				if (empty[n] !== s$) {
-					if ((!o.exists || s$) && (!o.ignore || !t[n]) && (o.filter && enyo.isFunction(o.filter)? o.filter(n, s$, s, t, o): true)) {
-						t[n] = s$;
+			for (var key in src) {
+				val = src[key];
+				
+				// quickly ensure the property isn't a default
+				if (empty[key] !== val) {
+					if (
+						(!opts.exists || val) &&
+						(!opts.ignore || !ret[key]) &&
+						(opts.filter? opts.filter(key, val, src, ret, opts): true)
+					) {
+						ret[key] = val;
 					}
 				}
 			}
 		}
-		return t;
+		
+		return ret;
 	};
+	enyo.mixin = mixin;
 
 	//* @public
 	/**

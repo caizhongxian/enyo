@@ -25,6 +25,14 @@
 		isNew: true,
 		
 		/**
+			@public
+			@method
+		*/
+		parse: function (data) {
+			return data;
+		},
+		
+		/**
 			@private
 			@method
 		*/
@@ -47,6 +55,9 @@
 			// this.store = isString(this.store)? getPath(this.store): this.store || enyo.store;
 			this.store = this.store || enyo.store;
 
+			// @TODO: The idea here is that when batch instancing records a collection
+			// should be intelligent enough to avoid doing each individually or in some
+			// cases it may be useful to have a record that is never added to a store?
 			if (!opts || !opts.noAdd) {
 				this.store.add(this);
 			}
