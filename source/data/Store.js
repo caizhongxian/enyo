@@ -39,7 +39,9 @@
 		
 		/**
 		*/
-		computed: {changeSet: []},
+		computed: [
+			{method: "changeSet"}
+		],
 		
 		/**
 			@public

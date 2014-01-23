@@ -360,7 +360,10 @@ enyo.kind({
 			this.reset();
 		}
 	},
-	computed: {selected: [], data: ["controller", "collection"]},
+	computed: [
+		{method: "selected"},
+		{method: "data", path: ["controller", "collection"]}
+	],
 	noDefer: true,
 	childMixins: [enyo.RepeaterChildSupport],
 	controlParentName: "container",

@@ -5,6 +5,7 @@
 		, isObject = enyo.isObject
 		, isArray = enyo.isArray
 		, isFunction = enyo.isFunction
+		, remove = enyo.remove
 		, forEach = enyo.forEach
 		, indexOf = enyo.indexOf
 		, toArray = enyo.toArray
@@ -13,6 +14,7 @@
 		, find = enyo.find
 		, filter = enyo.filter
 		, uuid = enyo.uuid
+		, nar = enyo.nar
 		, observerTable = {};
 		
 		
@@ -44,7 +46,7 @@
 			
 		if (obs.length) {
 			idx = find(observers, function (ln) {
-				return ln.method == fn;
+				return ln.path == path && ln.method === fn;
 			});
 			idx >= 0 && observers.splice(idx, 1);
 		}
@@ -144,7 +146,7 @@
 		*/
 		observers: function (path) {
 			var euid = this.euid || (this.euid = uuid())
-				, loc /*= observerTable[euid] || (observerTable[euid] = [])*/;
+				, loc;
 				
 			loc = observerTable[euid] || (observerTable[euid] = (
 				this.kindObservers? this.kindObservers.slice(): []
@@ -276,6 +278,8 @@
 	*/
 	var sup = enyo.concatHandler;
 	
+	// @NOTE: It seems like a lot of work but it really won't happen that much and the more
+	// we push to kind-time the better for initialization time
 	enyo.concatHandler = function (ctor, props) {
 		
 		sup.call(this, ctor, props);
@@ -297,21 +301,37 @@
 				old = props.observers;
 				props.observers = [];
 				forEach(keys(old), function (fn) {
-					forEach(old[fn], function (path) {
+					forEach(old[fn], function (dep) {
 						props.observers.push({
-							path: path,
+							path: dep,
 							method: props[fn] || proto[fn]
 						});
 					});
 				});
+			} else {
+				var xtra;
+				
+				props.observers = filter(props.observers, function (ln) {
+					if (isString(ln.method)) {
+						ln.method = props[ln.method] || proto[ln.method];
+					}
+					if (isArray(ln.path)) {
+						xtra || (xtra = []);
+						forEach(ln.path, function (path) {
+							xtra.push({
+								path: path,
+								method: ln.method
+							})
+						});
+						return false;
+					}
+					return true;
+				});
+				
+				xtra && (props.observers = props.observers.concat(xtra));
 			}
 			
-			if (isArray(props.observers)) {
-				observers = observers? observers.concat(props.observers): map(props.observers, function (ln) {
-					isString(ln.method) && (ln.method = props[ln.method] || proto[ln.method]);
-					return ln;
-				});
-			}
+			observers = observers? observers.concat(props.observers): props.observers;
 		
 			delete props.observers;
 			proto.kindObservers = observers;
