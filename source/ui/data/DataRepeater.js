@@ -105,9 +105,9 @@ enyo.kind({
 			this.selectionChanged();
 		};
 	}),
-	observers: {
-		selectionChanged: ["multipleSelection"]
-	},
+	observers: [
+		{method: "selectionChanged", path: "multipleSelection"}
+	],
 	selectionChanged: function () {
 		this.addRemoveClass(this.selectionClass, this.selection);
 		this.addRemoveClass(this.multipleSelectionClass, this.multipleSelection && this.selection);

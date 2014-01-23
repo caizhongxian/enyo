@@ -37,3 +37,9 @@ Added _emit()_ as an alias to _triggerEvent()_.
 
 _listeners_ is a property used for declarative additions in kind definitions but for an instance
 is the _listeners()_ method returning a mutable array of any listeners for the instance.
+
+### ComputedSupport
+
+_defaultValue_ was removed as an operational configuration option for a computed property.
+
+Added _isComputed()_ method, primarily for internal use.

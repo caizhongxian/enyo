@@ -375,7 +375,9 @@ enyo.kind({
 		work we do.
 	*/
 	handlers: {onScroll: "didScroll", onresize: "didResize"},
-	observers: {_absoluteShowingChanged: ["absoluteShowing"]},
+	observers: [
+		{method: "_absoluteShowingChanged", path: "absoluteShowing"}
+	],
 	//* Add the RegisteredEventSupport mixin for the paging event
 	mixins: [enyo.RegisteredEventSupport],
 	//* All delegates are named elsewhere but are stored in these statics.

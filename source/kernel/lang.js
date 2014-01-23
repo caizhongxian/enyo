@@ -96,8 +96,6 @@
 				if (b._isObject) {
 					if (b._getters && (fn = b._getters[r$])) {
 						b = b[fn]();
-					} else if (b.computed && b.get && b.computed[r$] != null) {
-						b = b[r$]();
 					} else {
 						b = b[r$];
 					}
@@ -129,8 +127,6 @@
 		var b = this, fn, v;
 		if (b._getters && (fn = b._getters[path])) {
 			v = b[fn]();
-		} else if (b.get && b.computed && b.computed[path] != null) {
-			v = b[path]();
 		} else {
 			v = b[path];
 		}
@@ -339,6 +335,7 @@
 		}
 		return false;
 	};
+	var find = enyo.find;
 
 	//* Returns the index of the element in _inArray_ that is equivalent
 	//* (==) to _inElement_, or -1 if no such element is found.
@@ -847,6 +844,15 @@
 		return ret;
 	};
 	enyo.mixin = mixin;
+	
+	/**
+		@public
+		@method
+	*/
+	enyo.where = function (ary, fn, ctx) {
+		var idx = find(ary, fn, ctx);
+		return idx >= 0? ary[idx]: null;
+	};
 
 	//* @public
 	/**

@@ -26,7 +26,7 @@
 			
 			this.observers().push({
 				path: path,
-				fn: fn,
+				method: fn,
 				ctx: ctx || this
 			});
 			
@@ -38,13 +38,13 @@
 	/**
 		@private
 	*/
-	function removeObserver (path, fn, ctx) {
+	function removeObserver (path, fn) {
 		var observers = this.observers()
 			, idx;
 			
 		if (obs.length) {
 			idx = find(observers, function (ln) {
-				return ln.path == path;
+				return ln.method == fn;
 			});
 			idx >= 0 && observers.splice(idx, 1);
 		}
@@ -61,9 +61,9 @@
 			var observers = this.observers(path);
 			
 			if (observers.length) {
-				forEach(observers, function (ln) {
-					ln.fn.call(ln.ctx, was, is, path);
-				});
+				forEach(observers, function (ln) {					
+					ln.method.call(ln.ctx || (ln.ctx = this), was, is, path);
+				}, this);
 			}
 			
 		} else {
@@ -289,10 +289,10 @@
 			// the previous, still _ok_ but hopefully deprecated way of declaring
 			// observers for a kind
 			if (isObject(props.observers)) {
-				enyo.warn(
-					"enyo.ObserverSupport: see documentation on declaring observers to improve initialization time " +
-					"for kind `" + (props.kindName || proto.kindName) + "`"
-				);
+				// enyo.warn(
+				// 	"enyo.ObserverSupport: see documentation on declaring observers to improve initialization time " +
+				// 	"for kind `" + (props.kindName || proto.kindName) + "`"
+				// );
 
 				old = props.observers;
 				props.observers = [];
@@ -307,7 +307,10 @@
 			}
 			
 			if (isArray(props.observers)) {
-				observers = observers? observers.concat(props.observers): props.observers;
+				observers = observers? observers.concat(props.observers): map(props.observers, function (ln) {
+					isString(ln.method) && (ln.method = props[ln.method] || proto[ln.method]);
+					return ln;
+				});
 			}
 		
 			delete props.observers;

@@ -17,7 +17,7 @@
 
 		this.listeners().push({
 			event: e,
-			fn: fn,
+			method: fn,
 			ctx: ctx || this
 		});
 		
@@ -30,7 +30,6 @@
 	function emit(e) {
 		var len = arguments.length
 			, listeners = this.listeners(e)
-			, dit = this
 			, args;
 			
 		if (listeners.length) {
@@ -42,7 +41,7 @@
 			}
 			
 			forEach(listeners, function (ln) {
-				ln.fn.apply(ln.ctx, args);
+				ln.method.apply(ln.ctx, args);
 			});
 			
 			return true;
@@ -121,7 +120,7 @@
 			
 			if (listeners.length) {
 				idx = find(listeners, function (ln) {
-					return ln.fn === fn;
+					return ln.method === fn;
 				});
 				idx >= 0 && listeners.splice(idx, 1);
 			}
