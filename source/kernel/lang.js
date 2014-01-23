@@ -303,7 +303,6 @@
 		// explicit null/undefined check for IE8 compatibility
 		return (it != null) && (toString.call(it) === "[object Object]");
 	};
-	var isObject = enyo.isObject;
 
 	//* Returns true if the argument is true.
 	enyo.isTrue = function(it) {

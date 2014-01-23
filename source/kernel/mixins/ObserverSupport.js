@@ -1,20 +1,14 @@
 (function (enyo) {
 	
-	var bind = enyo.bindSafely
-		, isString = enyo.isString
+	var isString = enyo.isString
 		, isObject = enyo.isObject
 		, isArray = enyo.isArray
 		, isFunction = enyo.isFunction
-		, remove = enyo.remove
 		, forEach = enyo.forEach
-		, indexOf = enyo.indexOf
-		, toArray = enyo.toArray
 		, keys = enyo.keys
-		, map = enyo.map
 		, find = enyo.find
 		, filter = enyo.filter
 		, uuid = enyo.uuid
-		, nar = enyo.nar
 		, observerTable = {};
 		
 		
@@ -44,7 +38,7 @@
 		var observers = this.observers()
 			, idx;
 			
-		if (obs.length) {
+		if (observers.length) {
 			idx = find(observers, function (ln) {
 				return ln.path == path && ln.method === fn;
 			});
@@ -293,11 +287,6 @@
 			// the previous, still _ok_ but hopefully deprecated way of declaring
 			// observers for a kind
 			if (isObject(props.observers)) {
-				// enyo.warn(
-				// 	"enyo.ObserverSupport: see documentation on declaring observers to improve initialization time " +
-				// 	"for kind `" + (props.kindName || proto.kindName) + "`"
-				// );
-
 				old = props.observers;
 				props.observers = [];
 				forEach(keys(old), function (fn) {
@@ -321,7 +310,7 @@
 							xtra.push({
 								path: path,
 								method: ln.method
-							})
+							});
 						});
 						return false;
 					}

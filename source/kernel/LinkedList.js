@@ -2,8 +2,7 @@
 	
 	var kind = enyo.kind
 		, mixin = enyo.mixin
-		, constructorForKind = enyo.constructorForKind
-		, isObject = enyo.isObject;
+		, constructorForKind = enyo.constructorForKind;
 	
 	/**
 		@public
@@ -164,8 +163,8 @@
 			var prev = node.prev
 				, next = node.next;
 				
-			prev && prev.next = next;
-			next && next.prev = prev;
+			prev && (prev.next = next);
+			next && (next.prev = prev);
 			this.length--;
 			node.next = node.prev = null;
 			return this;
@@ -211,7 +210,7 @@
 					if (fn.call(ctx || this, node, this)) {
 						return node;
 					}
-				} while ((node = node.next))
+				} while ((node = node.next));
 			}
 			// if no node qualified it returns false
 			return false;

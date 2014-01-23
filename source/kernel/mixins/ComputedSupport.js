@@ -1,7 +1,6 @@
 (function (enyo) {
 	
-	var bind = enyo.bindSafely
-		, isString = enyo.isString
+	var isString = enyo.isString
 		, isObject = enyo.isObject
 		, isArray = enyo.isArray
 		, isFunction = enyo.isFunction
@@ -9,15 +8,11 @@
 		, remove = enyo.remove
 		, forEach = enyo.forEach
 		, indexOf = enyo.indexOf
-		, toArray = enyo.toArray
 		, clone = enyo.clone
 		, keys = enyo.keys
-		, map = enyo.map
-		, find = enyo.find
 		, nar = enyo.nar
 		, filter = enyo.filter
-		, inherit = enyo.inherit
-		, uuid = enyo.uuid;
+		, inherit = enyo.inherit;
 		
 	var defaultConfig = {};
 	
@@ -179,7 +174,7 @@
 			
 			return !name? computed: filter(computed, function (ln) {
 				return ln.method === match || ln.name == match;
-			})
+			});
 		}
 	};
 	
@@ -204,11 +199,6 @@
 			// the previous, still _ok_ but hopefully deprecated way of declaring
 			// computed for a kind
 			if (isObject(props.computed)) {
-				// enyo.warn(
-				// 	"enyo.ComputedSupport: see documentation on declaring computed properties to improve initialization time " +
-				// 	"for kind `" + (props.kindName || proto.kindName) + "`"
-				// );
-
 				old = props.computed;
 				props.computed = [];
 				forEach(keys(old), function (fn) {
@@ -231,7 +221,7 @@
 							name: fn,
 							path: dep,
 							config: conf
-						})
+						});
 					});
 				});
 			} else {

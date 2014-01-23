@@ -1,9 +1,6 @@
 (function (enyo) {
 	
-	var bind = enyo.bindSafely
-		, isString = enyo.isString
-		, forEach = enyo.forEach
-		, indexOf = enyo.indexOf
+	var forEach = enyo.forEach
 		, toArray = enyo.toArray
 		, find = enyo.find
 		, filter = enyo.filter
