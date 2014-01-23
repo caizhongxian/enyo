@@ -5,3 +5,8 @@ Thumbs.db
 /source/minify/build
 /examples/3 - Making Builds/source/minify/build
 /examples/3 - Making Builds/source/minify-include-enyo/build
+node_modules/chai
+node_modules/mocha
+node_modules/phantomjs
+node_modules/mocha-phantomjs
+node_modules/\.bin
