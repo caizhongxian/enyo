@@ -133,7 +133,7 @@ describe ("Observer", function () {
 			
 			it ("should stop propagation of changes", function () {
 				obj.observe("testprop", function () {
-					throw "should not execute observer";
+					throw new Error("should not execute observer");
 				});
 				obj.stopNotifications();
 				obj.set("testprop", true);
@@ -155,7 +155,7 @@ describe ("Observer", function () {
 			
 			it ("should not queue changes if called with noQueue true", function () {
 				obj.observe("testprop", function () {
-					throw "should not execute observer";
+					throw new Error("should not execute observer");
 				});
 				
 				obj.stopNotifications(true);
@@ -272,6 +272,27 @@ describe ("Observer", function () {
 				expect(obj._notificationQueueEnabled).to.be.true;
 				obj.disableNotificationQueue();
 				expect(obj._notificationQueueEnabled).to.be.false;
+			});
+		});
+		
+		describe ("#removeAllObservers", function () {
+			var obj = new enyo.Object();
+			
+			after (function () {
+				obj.destroy();
+			});
+			
+			it ("should respond to removeAllObservers", function () {
+				expect(obj).to.respondTo("removeAllObservers");
+			});
+			
+			it ("should remove any observers for a given instance", function () {
+				obj.observe("testprop", function () {
+					throw new Error("should not trigger observer");
+				});
+				
+				obj.removeAllObservers();
+				expect(obj.observers()).to.be.empty;
 			});
 		})
 	});
