@@ -418,21 +418,103 @@ describe ("Observer", function () {
 		});
 	});
 	
-	// describe ("path support", function () {
-	// 	var ctor;
-	// 	
-	// 	ctor = enyo.kind({
-	// 		chainObserver: function (was, is, prop) {
-	// 			throw new Error(prop);
-	// 		},
-	// 		observers: [
-	// 			{method: "chainObserver", path: "some.nested.property"}
-	// 		],
-	// 		create: function () {
-	// 			this.inherited(arguments);
-	// 			this.set("some", )
-	// 		}
-	// 	});
-	// 	
-	// });
+	describe ("chained observers", function () {
+		var ctor, obj;
+		
+		ctor = enyo.kind({
+			chainObserver: function (was, is, path) {
+				throw new Error(path);
+			},
+			chainValueInspector: function (was, is, path) {
+				expect(was).to.be.true;
+				expect(is).to.be.undefined;
+				expect(path).to.equal("broken.chain.path");
+			},
+			observers: [
+				{method: "chainObserver", path: "some.nested.property"},
+				{method: "chainValueInspector", path: "broken.chain.path"}
+			],
+			some: new enyo.Object({
+				nested: new enyo.Object({
+					property: true
+				})
+			}),
+			broken: new enyo.Object({
+				chain: new enyo.Object({
+					path: true
+				})
+			})
+		});
+		
+		beforeEach (function () {
+			obj = new ctor();
+		});
+		
+		afterEach (function () {
+			obj.destroy();
+		});
+		
+		it ("should work with declarative observers", function () {
+			var fn = function () {
+				obj.set("some.nested.property", false);
+			};
+			
+			expect(fn).to.throw("some.nested.property");
+			expect(obj.get("some.nested.property")).to.be.false;
+		});
+		
+		it ("should work with registered observers", function () {
+			var path, fn;
+			
+			obj.observe("another.chained.moreLengthy.path", function (was, is, path) {
+				throw new Error(path);
+			});
+			
+			path = new enyo.Object({
+				chained: new enyo.Object({
+					moreLengthy: new enyo.Object({
+						path: true
+					})
+				})
+			});
+			
+			fn = function () {
+				obj.set("another", path);
+			};
+			
+			expect(fn).to.throw("another.chained.moreLengthy.path");
+			expect(obj.get("another.chained.moreLengthy.path")).to.be.true;
+		});
+		
+		it ("should supply an undefined when the chain is broken", function () {
+			obj.set("broken", null);
+		});
+		
+		it ("should report the correct, new value when a section of the chain is replaced indirectly", function () {
+			// haha, that wasn't intentional but it's staying
+			var some = obj.get("some")
+				, fn, repl;
+			repl = new enyo.Object({
+				property: "now it's a string"
+			});
+			
+			fn = function () {
+				some.set("nested", repl);
+			};
+			
+			expect(fn).to.throw("some.nested.property");
+			expect(obj.get("some.nested.property")).to.equal("now it's a string");
+		});
+		
+		it ("should destroy all chains when an object is destroyed", function () {
+			var chains = obj.chains();
+			expect(chains).to.be.an("array").and.have.length(2);
+			obj.destroy();
+			enyo.forEach(chains, function (chain) {
+				expect(chain.destroyed).to.be.true;
+				expect(chain).to.have.length(0);
+			});
+		});
+		
+	});
 });

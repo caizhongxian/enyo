@@ -278,6 +278,28 @@
 			@private
 			@method
 		*/
+		constructor: inherit(function (sup) {
+			return function () {
+				var chains;
+				
+				// if there are any observers that need to create dynamic chains
+				// we look for and instance those now
+				if (this._observerChains) {
+					chains = this._observerChains.slice();
+					this._observerChains = [];
+					forEach(chains, function (chain) {
+						this.addObserver(chain.path, chain.method);
+					}, this);
+				}
+				
+				sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@private
+			@method
+		*/
 		destroy: inherit(function (sup) {
 			return function () {
 				sup.apply(this, arguments);
@@ -309,6 +331,7 @@
 		if (props.observers && !isFunction(props.observers)) {
 			var proto = ctor.prototype || ctor
 				, observers = proto.kindObservers? proto.kindObservers.slice(): null
+				, chains = proto._observerChains? proto._observerChains.slice(): null
 				, old;
 			
 			// the previous, still _ok_ but hopefully deprecated way of declaring
@@ -318,10 +341,18 @@
 				props.observers = [];
 				forEach(keys(old), function (fn) {
 					forEach(old[fn], function (dep) {
-						props.observers.push({
-							path: dep,
-							method: props[fn] || proto[fn]
-						});
+						if (dep.indexOf(".") >= 0) {
+							chains || (chains = []);
+							chains.push({
+								path: dep,
+								method: props[fn] || proto[fn]
+							});
+						} else {
+							props.observers.push({
+								path: dep,
+								method: props[fn] || proto[fn]
+							});
+						}
 					});
 				});
 			} else {
@@ -334,10 +365,25 @@
 					if (isArray(ln.path)) {
 						xtra || (xtra = []);
 						forEach(ln.path, function (path) {
-							xtra.push({
-								path: path,
-								method: ln.method
-							});
+							if (path.indexOf(".") >= 0) {
+								chains || (chains = []);
+								chains.push({
+									path: path,
+									method: ln.method
+								});
+							} else {
+								xtra.push({
+									path: path,
+									method: ln.method
+								});
+							}
+						});
+						return false;
+					} else if (ln.path.indexOf(".") >= 0) {
+						chains || (chains = []);
+						chains.push({
+							path: ln.path,
+							method: ln.method
 						});
 						return false;
 					}
@@ -351,6 +397,7 @@
 		
 			delete props.observers;
 			proto.kindObservers = observers;
+			proto._observerChains = chains;
 		}
 	};
 	
