@@ -9,6 +9,7 @@
 		, find = enyo.find
 		, filter = enyo.filter
 		, uuid = enyo.uuid
+		, inherit = enyo.inherit
 		, observerTable = {};
 		
 	var ObserverChain = enyo.ObserverChain;
@@ -271,7 +272,25 @@
 			this._notificationQueueEnabled = false;
 			this._notificationQueue = null;
 			return this;
-		}
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		destroy: inherit(function (sup) {
+			return function () {
+				sup.apply(this, arguments);
+				
+				if (this._observerChains) {
+					forEach(this._observerChains, function (chain) {
+						chain.destroy();
+					});
+					
+					this._observerChains = null;
+				}
+			};
+		})
 		
 	};
 	

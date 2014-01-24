@@ -84,6 +84,10 @@
 				this.disconnect();
 				this.object = object;
 				this.connect();
+				
+				// @TODO: It would be better to somehow cache values
+				// such that it could intelligently derive the difference
+				// without needing to continuously look it up with get
 				was !== is && this.list.observed(this, was, is);
 			}
 		},
