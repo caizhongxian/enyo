@@ -513,6 +513,7 @@ describe ("Observer", function () {
 			enyo.forEach(chains, function (chain) {
 				expect(chain.destroyed).to.be.true;
 				expect(chain).to.have.length(0);
+				expect(chain.head).to.equal(chain.tail).and.to.be.null;
 			});
 		});
 		
