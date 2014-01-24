@@ -417,4 +417,22 @@ describe ("Observer", function () {
 			});
 		});
 	});
+	
+	// describe ("path support", function () {
+	// 	var ctor;
+	// 	
+	// 	ctor = enyo.kind({
+	// 		chainObserver: function (was, is, prop) {
+	// 			throw new Error(prop);
+	// 		},
+	// 		observers: [
+	// 			{method: "chainObserver", path: "some.nested.property"}
+	// 		],
+	// 		create: function () {
+	// 			this.inherited(arguments);
+	// 			this.set("some", )
+	// 		}
+	// 	});
+	// 	
+	// });
 });

@@ -11,21 +11,21 @@
 		, uuid = enyo.uuid
 		, observerTable = {};
 		
+	var ObserverChain = enyo.ObserverChain;
 		
 	/**
 		@private
 	*/
 	function addObserver (path, fn, ctx) {
+		
+		this.observers().push({
+			path: path,
+			method: fn,
+			ctx: ctx || this
+		});
+		
 		if (path.indexOf(".") >= 0) {
-			
-		} else {
-			
-			this.observers().push({
-				path: path,
-				method: fn,
-				ctx: ctx || this
-			});
-			
+			this.chains().push(new ObserverChain(path, this));
 		}
 		
 		return this;
@@ -149,6 +149,14 @@
 			return !path? loc: filter(loc, function (ln) {
 				return ln.path == path;
 			});
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		chains: function () {
+			return this._observerChains || (this._observerChains = []);
 		},
 		
 		/**
