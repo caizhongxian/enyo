@@ -25,7 +25,7 @@
 			ctx: ctx || this
 		});
 		
-		if (path.indexOf(".") >= 0) {
+		if (path.indexOf(".") > 0) {
 			this.chains().push(new ObserverChain(path, this));
 		}
 		
@@ -38,12 +38,22 @@
 	function removeObserver (path, fn) {
 		var observers = this.observers()
 			, idx;
-			
+		
 		if (observers.length) {
 			idx = find(observers, function (ln) {
 				return ln.path == path && ln.method === fn;
 			});
 			idx >= 0 && observers.splice(idx, 1);
+		}
+		
+		if (path.indexOf(".") > 0) {
+			this._observerChains = filter(this.chains(), function (ln) {
+				if (ln.path == path) {
+					ln.destroy();
+					return false;
+				}
+				return true;
+			});
 		}
 		
 		return this;

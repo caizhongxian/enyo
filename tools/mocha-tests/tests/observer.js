@@ -1,9 +1,13 @@
 describe ("Observer", function () {
 	describe ("methods", function () {
 		describe ("#addObserver", function () {
-			var obj = new enyo.Object();
+			var obj;
 		
-			after (function () {
+			beforeEach (function () {
+				obj = new enyo.Object();
+			});
+		
+			afterEach (function () {
 				obj.destroy();
 			});
 		
@@ -16,12 +20,29 @@ describe ("Observer", function () {
 				expect(obj.observers()).to.be.an("array");
 				expect(obj.observers()).to.have.length(1);
 			});
+			
+			it ("should use the correct context when provided", function () {
+				var obj1 = new enyo.Object({name: "obj1"});
+				
+				obj.addObserver("someProp", function () {
+					obj.set("name", this.get("name"));
+				}, obj1);
+				
+				obj.set("someProp", true);
+				
+				expect(obj.name).to.be.a("string").and.to.equal("obj1");
+				obj1.destroy();
+			});
 		});
 		
 		describe ("#observe", function () {
-			var obj = new enyo.Object();
+			var obj;
 			
-			after (function () {
+			beforeEach (function () {
+				obj = new enyo.Object();
+			});
+			
+			afterEach (function () {
 				obj.destroy();
 			});
 			
@@ -33,6 +54,19 @@ describe ("Observer", function () {
 				obj.observe("testprop", function () {});
 				expect(obj.observers()).to.be.an("array");
 				expect(obj.observers()).to.have.length(1);
+			});
+			
+			it ("should use the correct context when provided", function () {
+				var obj1 = new enyo.Object({name: "obj1"});
+				
+				obj.observe("someProp", function () {
+					obj.set("name", this.get("name"));
+				}, obj1);
+				
+				obj.set("someProp", true);
+				
+				expect(obj.name).to.be.a("string").and.to.equal("obj1");
+				obj1.destroy();
 			});
 		});
 		
@@ -53,7 +87,18 @@ describe ("Observer", function () {
 				expect(obj.observers()).to.have.length(1);
 				obj.removeObserver("testprop", fn);
 				expect(obj.observers()).to.be.empty;
-			})
+			});
+			
+			it ("should destroy a chain when its path is unobserved", function () {
+				var chain, fn;
+				
+				fn = function () {};
+				obj.addObserver("some.nested.property", fn);
+				chain = obj.chains()[0];
+				obj.removeObserver("some.nested.property", obj.chainObserver);
+				expect(chain.destroyed).to.be.true;
+				expect(obj.chains()).to.be.empty;
+			});
 		});
 		
 		describe ("#unobserve", function () {
@@ -73,7 +118,18 @@ describe ("Observer", function () {
 				expect(obj.observers()).to.have.length(1);
 				obj.unobserve("testprop", fn);
 				expect(obj.observers()).to.be.empty;
-			})
+			});
+			
+			it ("should destroy a chain when its path is unobserved", function () {
+				var chain, fn;
+				
+				fn = function () {};
+				obj.observe("some.nested.property", fn);
+				chain = obj.chains()[0];
+				obj.unobserve("some.nested.property", obj.chainObserver);
+				expect(chain.destroyed).to.be.true;
+				expect(obj.chains()).to.be.empty;
+			});
 		});
 		
 		describe ("#notifyObservers", function () {
@@ -516,6 +572,5 @@ describe ("Observer", function () {
 				expect(chain.head).to.equal(chain.tail).and.to.be.null;
 			});
 		});
-		
 	});
 });
