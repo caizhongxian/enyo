@@ -43,3 +43,9 @@ is the _listeners()_ method returning a mutable array of any listeners for the i
 _defaultValue_ was removed as an operational configuration option for a computed property.
 
 Added _isComputed()_ method, primarily for internal use.
+
+### BindingSupport
+
+Removed the previously public _initBindings()_ method (was used only during initialization of object and nowhere else in framework).
+
+Revmoed the previous public _refreshBindings()_ and _rebuildBindings()_ methods as they are no longer relevant.

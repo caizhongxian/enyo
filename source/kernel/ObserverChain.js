@@ -53,9 +53,9 @@
 		*/
 		connect: function () {
 			var obj = this.object
-				, obs = this.getObserver()
+				, obs = this.onChange
 				, prop = this.property;
-			obj && obj.observe(prop, obs);
+			obj && obj.observe && obj.observe(prop, obs, this, true);
 		},
 		
 		/**
@@ -64,9 +64,9 @@
 		*/
 		disconnect: function () {
 			var obj = this.object
-				, obs = this.getObserver()
+				, obs = this.onChange
 				, prop = this.property;
-			obj && obj.unobserve(prop, obs);
+			obj && obj.unobserve && obj.unobserve(prop, obs);
 		},
 		
 		/**
@@ -94,15 +94,9 @@
 		
 		/**
 			@public
-			@method
 		*/
-		getObserver: function () {
-			var obj = this.object
-				, obs = this.observer
-				, dit = this;
-			return obj? obs || (this.observer = function (was, is) {
-				dit.list.observed(dit, was, is);
-			}): null;
+		onChange: function (was, is) {
+			this.list.observed(this, was, is);
 		}
 	});
 	
@@ -180,19 +174,22 @@
 			var parts = this.parts
 				, next = this.object
 				, last = parts.length - 1
+				, $ = false
 				, node;
 				
 			forEach(parts, function (prop, idx) {
-				node = this.createNode({property: prop, object: next, list: this});
-
-				this.appendNode(node);
-				
-				next = get(next, prop);
-				
-				// we will always care to cache the value (if any and when possible)
-				// so we can detect changes to it on rebuilds
-				if (idx == last) {
-					this.value = next;
+				// we create a special case for the $ hash property
+				if (prop == "$") {
+					$ = true;
+				} else {
+					// in cases where the chain has the $ property we arbitrarily
+					// force it onto our current nodes property and let the special handling
+					// in ObserverChainNode and ObserverSupport handle the rest
+					$ && (prop = "$." + prop);
+					node = this.createNode({property: prop, object: next, list: this});
+					this.appendNode(node);
+					next = get(next, prop);
+					$ = false;
 				}
 			}, this);
 		},
@@ -203,7 +200,7 @@
 		*/
 		observed: function (node, was, is) {
 			this.object.stopNotifications();
-			node !== this.head && this.object.notify(this.buildPath(node), was, is);
+			node !== this.head && was !== is && this.object.notify(this.buildPath(node), was, is);
 			this.rebuild(node);			
 			this.object.startNotifications();
 		}

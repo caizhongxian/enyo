@@ -21,9 +21,9 @@
 		@method
 	*/
 	function ready (binding) {
-		var rdy = false;
+		var rdy = binding.ready;
 		
-		if (!binding.ready) {
+		if (!rdy) {
 			
 			var from = binding.from || ""
 				, to = binding.to || ""
@@ -288,12 +288,18 @@
 			@method
 		*/
 		destroy: function () {
+			var owner = this.owner;
+			
 			this.disconnect();
 			this.owner = null;
 			this.source = null;
 			this.target = null;
 			this.destroyed = true;
 			remove(this, bindings);
+			
+			if (owner && !owner.destroyed) {
+				owner.removeBinding(this);
+			}
 		},
 		
 		/**

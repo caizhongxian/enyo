@@ -17,7 +17,7 @@
 	/**
 		@private
 	*/
-	function addObserver (path, fn, ctx) {
+	function addObserver (path, fn, ctx, noChain) {
 		
 		this.observers().push({
 			path: path,
@@ -25,7 +25,7 @@
 			ctx: ctx || this
 		});
 		
-		if (path.indexOf(".") > 0) {
+		if (path.indexOf(".") > 0 && !noChain) {
 			this.chains().push(new ObserverChain(path, this));
 		}
 		
@@ -175,7 +175,7 @@
 			@method
 		*/
 		addObserver: function (path, fn, ctx) {
-			return addObserver.call(this, path, fn, ctx);
+			return addObserver.apply(this, arguments);
 		},
 		
 		/**
@@ -184,7 +184,7 @@
 			@alias addObserver
 		*/
 		observe: function (path, fn, ctx) {
-			return addObserver.call(this, path, fn, ctx);
+			return addObserver.apply(this, arguments);
 		},
 		
 		/**
