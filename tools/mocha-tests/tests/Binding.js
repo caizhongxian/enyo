@@ -553,6 +553,28 @@ describe ("Bindings", function () {
 					expect(loc).to.have.property("testprop4", "late-testprop");
 					loc.destroy();
 				});
+				it ("should function correctly with two-way synchronization", function () {
+					var loc;
+					
+					loc = enyo.singleton({
+						kind: enyo.Component,
+						components: [
+							{name: "one", testprop: true}
+						],
+						bindings: [
+							{from: ".$.one.testprop", to: ".testprop", oneWay: false}
+						]
+					});
+					
+					expect(loc).to.have.property("testprop", true);
+					
+					loc.set("testprop", false);
+					
+					expect(loc).to.have.property("testprop", false);
+					expect(loc.$.one).to.have.property("testprop", false);
+					
+					loc.destroy();
+				});
 			});
 			describe ("nested bindings arrays", function () {
 				it ("should have correct ownership when a bindings array block is in a nested component", function () {
@@ -579,6 +601,38 @@ describe ("Bindings", function () {
 					
 					expect(loc).to.have.property("linkedValue", "three");
 					expect(loc).to.have.property("value", "three");
+					
+					loc.destroy();
+				});
+			});
+			describe ("binding a complex object as a property", function () {
+				it ("should properly update a one-way synchronized binding", function () {
+					var loc, obj;
+					
+					loc = enyo.singleton({
+						kind: enyo.Component,
+						components: [
+							{name: "one", model: null}
+						],
+						bindings: [
+							{from: ".model", to: ".$.one.model"}
+						]
+					});
+					
+					obj = new enyo.Model();
+					
+					expect(loc.model).to.not.exist;
+					expect(loc.$.one.model).to.not.exist;
+					
+					loc.set("model", obj);
+					
+					expect(obj).to.equal(loc.model).and.to.equal(loc.$.one.model);
+					
+					obj = new enyo.Model();
+					
+					loc.set("model", obj);
+					
+					expect(obj).to.equal(loc.model).and.to.equal(loc.$.one.model);
 					
 					loc.destroy();
 				});
