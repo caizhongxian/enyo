@@ -554,6 +554,35 @@ describe ("Bindings", function () {
 					loc.destroy();
 				});
 			});
+			describe ("nested bindings arrays", function () {
+				it ("should have correct ownership when a bindings array block is in a nested component", function () {
+					var loc;
+					
+					loc = enyo.singleton({
+						kind: enyo.Component,
+						components: [
+							{name: "one", components: [
+								{name: "two", components: [
+									{name: "three", value: "three"}
+								], bindings: [
+									{from: ".owner.$.three.value", to: ".value"}
+								]}
+							], bindings: [
+								{from: ".owner.$.two.value", to: ".value"}
+							]}
+						],
+						bindings: [
+							{from: ".$.one.value", to: ".linkedValue"},
+							{from: ".$.three.value", to: ".value"}
+						]
+					});
+					
+					expect(loc).to.have.property("linkedValue", "three");
+					expect(loc).to.have.property("value", "three");
+					
+					loc.destroy();
+				});
+			});
 		});
 	});
 });
