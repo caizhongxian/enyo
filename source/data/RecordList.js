@@ -5,15 +5,16 @@
 		, forEach = enyo.forEach
 		, isArray = enyo.isArray;
 		
+	var LinkedList = enyo.LinkedList;
+		
 	/**
 		@private
-		@class
+		@class enyo.RecordList
 	*/
 	kind(
 		/** @lends enyo.RecordList.prototype */ {
-	
 		name: "enyo.RecordList",
-		kind: "enyo.LinkedList",
+		kind: LinkedList,
 		
 		/**
 			@private

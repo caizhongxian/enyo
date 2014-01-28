@@ -5,5 +5,6 @@ enyo.depends(
 	"BindingSupport.js",
 	"ApplicationSupport.js",
 	"MultipleDispatchSupport.js",
-	"EventEmitter.js"
+	"EventEmitter.js",
+	"ProxyObject.js"
 );

@@ -111,13 +111,13 @@
 			@public
 			@method
 		*/
-		removeListener: function (e, fn) {
+		removeListener: function (e, fn, ctx) {
 			var listeners = this.listeners()
 				, idx;
 			
 			if (listeners.length) {
 				idx = find(listeners, function (ln) {
-					return ln.method === fn;
+					return ln.event == e && ln.method === fn && ctx? ln.ctx === ctx: true;
 				});
 				idx >= 0 && listeners.splice(idx, 1);
 			}

@@ -2,7 +2,10 @@
 	
 	var kind = enyo.kind
 		, inherit = enyo.inherit
-		, bind = enyo.bindSafely;
+		, bind = enyo.bindSafely
+		, isFunction = enyo.isFunction;
+		
+	var EventEmitter = enyo.EventEmitter;
 		
 	/**
 		@private
@@ -10,6 +13,12 @@
 	*/
 	var Store = kind(
 		/** @lends Store.prototype */ {
+		kind: enyo.Object,
+		
+		/**
+			@private
+		*/
+		mixins: [EventEmitter],
 		
 		/**
 		*/
@@ -51,6 +60,69 @@
 				created: this.created.records()
 			};
 		},
+		
+		/**
+			@private
+			@method
+		*/
+		on: inherit(function (sup) {
+			return function (ctor, e, fn, ctx) {
+				if (isFunction(ctor)) {
+					this.scopeListeners().push({
+						scope: ctor,
+						event: e,
+						method: fn,
+						ctx: ctx || this
+					});
+					
+					return this;
+				}
+				
+				return sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@private
+			@method
+		*/
+		addListener: function () {
+			return this.on.apply(this, arguments);
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		removeListener: inherit(function (sup) {
+			return function (ctor, e, fn) {
+				if (isFunction(ctor)) {
+					var listeners = this.scopeListeners()
+						, idx;
+						
+					if (listeners.length) {
+						idx = find(listeners, function (ln) {
+							return ln.scope === ctor && ln.event == e && ln.method === fn;
+						});
+						idx >= 0 && listeners.splice(idx, 1);
+					}
+					
+					return this;
+				}
+				
+				return sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@private
+			@method
+		*/
+		scopeListeners: function (scope, e) {
+			return !scope? this._scopeListeners: filter(this._scopeListeners, function (ln) {
+				return ln.scope === scope? !e? true: ln.event === e: false; 
+			});
+		},
 			
 		/**
 			@private
@@ -67,8 +139,8 @@
 			
 			!this.has(record) && records.add(record);
 			
-			record.on("change", this.onChange);
-			record.on("destroy", this.onDestroy);
+			record.on("change", this.onChange, this);
+			record.on("destroy", this.onDestroy, this);
 			
 			if (record.isNew) {
 				created.add(record);
@@ -107,7 +179,7 @@
 		},
 		
 		/**
-			@private
+			@public
 			@method
 		*/
 		has: function (record) {
@@ -129,6 +201,22 @@
 		onDestroy: function () {
 			this.log(arguments);
 		},
+		
+		/**
+			@public
+			@method
+		*/
+		find: function () {
+			
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		findLocal: function (ctor, fn, opts) {
+			
+		},
 			
 		/**
 			@private
@@ -141,15 +229,12 @@
 				this.destroyed = new enyo.RecordList();
 				this.created = new enyo.RecordList();
 				this.records = new enyo.RecordList();
-				this.onChange = bind(this, this.onChange);
-				this.onDestroy = bind(this, this.onDestroy);
+				
+				// our overloaded event emitter methods need storage for
+				// the listeners
+				this._scopeListeners = [];
 			};
-		}),
-		
-		/**
-			@public
-		*/
-		kind: enyo.Object
+		})
 	});
 	
 	enyo.store = new Store();

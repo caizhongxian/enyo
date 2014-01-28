@@ -6,23 +6,41 @@
 		, getPath = enyo.getPath
 		, isString = enyo.isString
 		, uuid = enyo.uuid;
+		
+	var ProxyObject = enyo.ProxyObject
+		, ObserverSupport = enyo.ObserverSupport
+		, BindingSupport = enyo.BindingSupport
+		, EventEmitter = enyo.EventEmitter;
 
 	/**
 		@public
-		@class
+		@class enyo.Model
 	*/
 	kind(
 		/** @lends enyo.Model.prototype */ {
-		
 		name: "enyo.Model",
 		kind: null,
 		noDefer: true,
-		mixins: [enyo.ObserverSupport, enyo.BindingSupport, enyo.RegisteredEventSupport],
+		
+		/**
+			@private
+		*/
+		mixins: [ProxyObject, ObserverSupport, BindingSupport, EventEmitter],
 		
 		/**
 			@public
 		*/
 		isNew: true,
+		
+		/**
+			@public
+		*/
+		primaryKey: "id",
+		
+		/**
+			@private
+		*/
+		proxyObjectKey: "attributes",
 		
 		/**
 			@public
@@ -62,7 +80,6 @@
 				this.store.add(this);
 			}
 		}
-			
 	});
 
 })(enyo);

@@ -4,7 +4,7 @@ enyo.depends(
 	"RecordList.js",
 	"Store.js",
 	"Model.js",
-	"RelationalModel.js",
 	"Collection.js",
+	"RelationalModel.js",
 	"ModelController.js"
 );

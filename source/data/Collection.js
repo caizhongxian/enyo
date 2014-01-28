@@ -1,17 +1,136 @@
 (function (enyo) {
 	
-	var kind = enyo.kind;
+	var kind = enyo.kind
+		, inherit = enyo.inherit
+		, isArray = enyo.isArray
+		, isObject = enyo.isObject
+		, isString = enyo.isString
+		, constructorForKind = enyo.constructorForKind
+		, forEach = enyo.forEach
+		, map = enyo.map
+		, where = enyo.where
+		, find = enyo.find
+		, filter = enyo.filter
+		, store = enyo.store;
+	
+	var Component = enyo.Component
+		, EventEmitter = enyo.EventEmitter
+		, Model = enyo.Model
+		, RecordList = enyo.RecordList;
 	
 	/**
 		@public
-		@class
+		@class enyo.Collection
 	*/
 	kind(
 		/** @lends enyo.Collection.prototype */ {
-		
 		name: "enyo.Collection",
-		kind: "enyo.Component"
+		kind: Component,
+		
+		/**
+			@public
+		*/
+		model: Model,
+		
+		/**
+			@public
+		*/
+		options: {},
+		
+		/**
+			@private
+		*/
+		mixins: [EventEmitter],
+		
+		/**
+			@public
+			@method
+		*/
+		parse: function (data) {
+			return data;
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		add: function (add, opts) {
+			var loc = this.records
+				, len = this.length
+				, model = this.model
+				, pkey = model.prototype.primaryKey
+				, idx = len
+				, added;
 			
+			!isNaN(opts) && (idx = opts);
+			idx = Math.min(Math.max(0, idx), len);
+			opts = isObject(opts)? opts: this.options;
+			add = isArray(add)? add: [add];
+			
+			forEach(add, function (ln) {
+				var ent;
+				
+				if (!(ln instanceof model)) {
+					if ((ent = loc.has(ln[pkey]))) {
+						if (opts.merge) ent.record.set(ln);
+						return;
+					}
+					
+					ln = this.create(ln);
+				} else if ((ent = loc.has(ln))) {
+					if (opts.merge) ent.record.set(ln.raw());
+					return;
+				}
+				
+				loc.add(ln);
+				added || (added = []);
+				added.push(ln);
+			}, this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		remove: function () {
+			
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		create: function () {
+			
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		constructor: inherit(function (sup) {
+			return function (recs, props) {
+				
+				// if properties were passed in but not a records array
+				props = recs && !isArray(recs)? recs: props;
+				if (props === recs) recs = null;
+				// initialize our core records
+				this.records = new RecordList();
+				
+				if (props.records) {
+					recs = recs? recs.concat(props.records): props.records.slice();
+					delete props.records;
+				}
+				
+				this.length = this.records.length;
+				this.store = this.store || store;
+				isString(this.model) && (this.model = constructorForKind(this.model));
+				
+				recs && recs.length && this.add(recs);
+				
+				sup.call(this, props);
+			};
+		})
 	});
 	
 })(enyo);
