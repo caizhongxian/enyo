@@ -28,7 +28,7 @@ describe ("Bindings", function () {
 					expect(enyo.Binding.find(bnd.euid)).to.deep.equal(bnd);
 				});
 				it ("should return undefined when not found", function () {
-					expect(enyo.Binding.find(enyo.uuid())).to.be.undefined;
+					expect(enyo.Binding.find(enyo.uid("b"))).to.be.undefined;
 				});
 			});
 		});

@@ -2,7 +2,7 @@
 	
 	var kind = enyo.kind
 		, mixin = enyo.mixin
-		, uuid = enyo.uuid
+		, uid = enyo.uid
 		, where = enyo.where
 		, isString = enyo.isString
 		, isObject = enyo.isObject
@@ -277,7 +277,7 @@
 			
 			props && mixin(this, props);
 			
-			this.euid || (this.euid = uuid());
+			this.euid || (this.euid = uid("b"));
 			
 			this.autoConnect && this.connect();
 			this.autoSync && this.sync();

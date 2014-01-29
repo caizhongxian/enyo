@@ -22,6 +22,10 @@
 		
 		/**
 		*/
+		batch: false,
+		
+		/**
+		*/
 		isDirty: false,
 		
 		/**
@@ -135,14 +139,15 @@
 			// is forced?
 			
 			var records = this.records
-				, created = this.created;
+				, created = this.created
+				, batch = this.batch;
 			
-			!this.has(record) && records.add(record);
+			/*!this.has(record) && */records.add(record);
 			
 			record.on("change", this.onChange, this);
 			record.on("destroy", this.onDestroy, this);
 			
-			if (record.isNew) {
+			if (record.isNew && batch) {
 				created.add(record);
 				this.isDirty = true;
 			}
@@ -159,19 +164,18 @@
 			
 			var records = this.records
 				, created = this.created
-				, destroyed = this.destroyed;
+				, destroyed = this.destroyed
+				, batch = this.batch;
 				
 			if (this.has(record)) {
 				records.remove(record);
 				
-				if (record.isNew) {
-					created.remove(record);
-				} else {
-					destroyed.add(record);
+				if (batch) {
+					record.isNew? created.remove(record): destroyed.add(record);
 				}
 				
-				record.removeListener("change", this.onChange);
-				record.removeListener("destroy", this.onDestroy);
+				record.removeListener("change", this.onChange, this);
+				record.removeListener("destroy", this.onDestroy, this);
 				this.length = records.length;
 			}
 			

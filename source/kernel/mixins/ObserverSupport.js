@@ -8,7 +8,7 @@
 		, keys = enyo.keys
 		, find = enyo.find
 		, filter = enyo.filter
-		, uuid = enyo.uuid
+		, uid = enyo.uid
 		, inherit = enyo.inherit
 		, observerTable = {};
 		
@@ -150,7 +150,7 @@
 			@method
 		*/
 		observers: function (path) {
-			var euid = this.euid || (this.euid = uuid())
+			var euid = this.euid || (this.euid = uid("o"))
 				, loc;
 				
 			loc = observerTable[euid] || (observerTable[euid] = (

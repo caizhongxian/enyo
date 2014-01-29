@@ -4,37 +4,37 @@
 		, toArray = enyo.toArray
 		, find = enyo.find
 		, filter = enyo.filter
-		, uuid = enyo.uuid
+		, uid = enyo.uid
 		, eventTable = {};
 	
 	/**
 		@private
 	*/
-	function addListener(e, fn, ctx) {
+	function addListener(obj, e, fn, ctx) {
 
-		this.listeners().push({
+		obj.listeners().push({
 			event: e,
 			method: fn,
-			ctx: ctx || this
+			ctx: ctx || obj
 		});
 		
-		return this;
+		return obj;
 	}
 	
 	/**
 		@private
 	*/
-	function emit(e) {
-		var len = arguments.length
-			, listeners = this.listeners(e)
-			, args;
+	function emit(obj, args) {
+		var len = args.length
+			, e = args[0]
+			, listeners = obj.listeners(e);
 			
 		if (listeners.length) {
 			if (len > 1) {
-				args = toArray(arguments);
-				args.unshift(this);
+				args = toArray(args);
+				args.unshift(obj);
 			} else {
-				args = [this, e];
+				args = [obj, e];
 			}
 			
 			forEach(listeners, function (ln) {
@@ -94,8 +94,8 @@
 			@public
 			@method
 		*/
-		addListener: function () {			
-			return addListener.apply(this, arguments);
+		addListener: function (e, fn, ctx) {			
+			return addListener(this, e, fn, ctx);
 		},
 		
 		/**
@@ -104,7 +104,7 @@
 			@alias addListener
 		*/
 		on: function (e, fn, ctx) {
-			return addListener.apply(this, arguments);
+			return addListener(this, e, fn, ctx);
 		},
 		
 		/**
@@ -150,7 +150,7 @@
 			@method
 		*/
 		listeners: function (e) {
-			var euid = this.euid || (this.euid = uuid())
+			var euid = this.euid || (this.euid = uid("e"))
 				, loc = eventTable[euid] || (eventTable[euid] = []);
 			
 			return !e? loc: filter(loc, function (ln) {
@@ -164,7 +164,7 @@
 			@alias emit
 		*/
 		triggerEvent: function () {
-			return emit.apply(this, arguments);
+			return emit(this, arguments);
 		},
 		
 		/**
@@ -172,7 +172,7 @@
 			@method
 		*/
 		emit: function () {
-			return emit.apply(this, arguments);
+			return emit(this, arguments);
 		}
 	};
 	

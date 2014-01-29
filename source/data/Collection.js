@@ -115,7 +115,7 @@
 				props = recs && !isArray(recs)? recs: props;
 				if (props === recs) recs = null;
 				// initialize our core records
-				this.records = new RecordList();
+				this.records = [];
 				
 				if (props.records) {
 					recs = recs? recs.concat(props.records): props.records.slice();
