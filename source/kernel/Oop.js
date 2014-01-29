@@ -16,11 +16,15 @@
 	For more information, see the documentation on [Creating
 	Kinds](key-concepts/creating-kinds.html) in the Enyo Developer Guide.
 */
-enyo.kind = function(inProps) {
-	var name = inProps.name || "";
+enyo.kind = function () {
+	var args = enyo.toArray(arguments)
+		, len = args.length
+		, props = args[len-1];
+	
+	var name = props.name || "";
 	// cannot defer unnamed kinds, kinds with static sections, or ones with
 	// noDefer flag set
-	if (!enyo.options.noDefer && name && !inProps.noDefer) {
+	if (!enyo.options.noDefer && name && !props.noDefer) {
 		// make a deferred constructor to avoid a lot of kind
 		// processing if we're never used
 		var DeferredCtor = function() {
@@ -43,17 +47,17 @@ enyo.kind = function(inProps) {
 		DeferredCtor._finishKindCreation = function() {
 			DeferredCtor._finishKindCreation = undefined;
 			enyo.setPath(name, undefined);
-			var FinalCtor = enyo.kind.finish(inProps);
+			var FinalCtor = enyo.kind.finish(args);
 			DeferredCtor._FinalCtor = FinalCtor;
-			inProps = null;
+			props = null;
 			return FinalCtor;
 		};
 		// copy public statics into DeferredCtor; note, this means
 		// public static items will need to be read-only since the
 		// deferrred kind constructor will have a different copy of
 		// non-object values than the final kind constructor
-		if (inProps.statics) {
-			enyo.mixin(DeferredCtor, inProps.statics);
+		if (props.statics) {
+			enyo.mixin(DeferredCtor, props.statics);
 		}
 		// always add the the extend capability for kinds even if they are
 		// deferred
@@ -71,20 +75,23 @@ enyo.kind = function(inProps) {
 		return DeferredCtor;
 	} else {
 		// create anonymous kinds immediately
-		return enyo.kind.finish(inProps);
+		return enyo.kind.finish(args);
 	}
 };
 //* @protected
-enyo.kind.finish = function(inProps) {
+enyo.kind.finish = function(args) {
+	var len = args.length
+		, props = args.pop();
+	
 	// kind-name to constructor map could be faulty now that a new kind exists, so we simply destroy the memoizations
 	enyo._kindCtors = {};
 	// extract 'name' property
-	var name = inProps.name || "";
-	delete inProps.name;
+	var name = props.name || "";
+	delete props.name;
 	// extract 'kind' property
-	var hasKind = ("kind" in inProps);
-	var kind = inProps.kind;
-	delete inProps.kind;
+	var hasKind = ("kind" in props);
+	var kind = props.kind;
+	delete props.kind;
 	// establish base class reference
 	var base = enyo.constructorForKind(kind);
 	var isa = base && base.prototype || null;
@@ -97,20 +104,28 @@ enyo.kind.finish = function(inProps) {
 	// make a boilerplate constructor
 	var ctor = enyo.kind.makeCtor();
 	// semi-reserved word 'constructor' causes problems with Prototype and IE, so we rename it here
-	if (inProps.hasOwnProperty("constructor")) {
-		inProps._constructor = inProps.constructor;
-		delete inProps.constructor;
+	if (props.hasOwnProperty("constructor")) {
+		props._constructor = props.constructor;
+		delete props.constructor;
 	}
 	// create our prototype
 	//ctor.prototype = isa ? enyo.delegate(isa) : {};
 	enyo.setPrototype(ctor, isa ? enyo.delegate(isa) : {});
+	
+	// if mixins were pushed into the arguments array before the final properties
+	// we need to apply those prior to the normal handling of mixins that are
+	// applied after-the-fact
+	if (len > 1) {
+		enyo.kind.statics.extend(args, ctor.prototype);
+	}
+	
 	// there are special cases where a base class has a property
 	// that may need to be concatenated with a subclasses implementation
 	// as opposed to completely overwriting it...
-	enyo.concatHandler(ctor, inProps);
+	enyo.concatHandler(ctor, props);
 
 	// put in our props
-	enyo.mixin(ctor.prototype, inProps);
+	enyo.mixin(ctor.prototype, props);
 	// alias class name as 'kind' in the prototype
 	// but we actually only need to set this if a new name was used,
 	// not if it is inheriting from a kind anonymously
@@ -126,7 +141,7 @@ enyo.kind.finish = function(inProps) {
 	// reference our real constructor
 	ctor.prototype.ctor = ctor;
 	// support pluggable 'features'
-	enyo.forEach(enyo.kind.features, function(fn){ fn(ctor, inProps); });
+	enyo.forEach(enyo.kind.features, function(fn){ fn(ctor, props); });
 	// put reference into namespace
 	if ((name && !enyo.getPath(name)) || enyo.kind.allowOverride) {
 		enyo.setPath(name, ctor);

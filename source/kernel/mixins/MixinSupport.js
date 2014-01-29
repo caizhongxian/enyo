@@ -3,36 +3,43 @@
 	var forEach = enyo.forEach
 		, extend = enyo.kind.statics.extend
 		, isString = enyo.isString
+		, isArray = enyo.isArray
 		, clone = enyo.clone
 		, indexOf = enyo.indexOf
 		, inherit = enyo.inherit;
 	
-	var sup = enyo.concatHandler;
-	
 	/**
+		Apply, with safeguards, a given mixin to an object.
 		@private
 	*/
 	function apply (proto, props) {
-		var prev = proto.mixins || (proto.mixins = [])
-			, name;
-		
-		isString(props) && (name = props) && (props = getPath(name));
-		
-		props || enyo.error("Could not find requested mixin " + name);
-		
-		!name && (name = props.name);
-		
-		if (indexOf(name, prev) == -1) {
-			prev.push(name);
-			props = clone(props);
-			delete props.name;
-		
+		var applied = proto._mixins || (proto._mixins = [])
+			, name = isString(props)? props: props.name
+			, idx = indexOf(name, applied);
+			
+		if (idx < 0) {
+			name == props && (props = getPath(name));
+			
+			// if we could not resolve the requested mixin (should never happen)
+			// we throw a simple little error
+			!props && enyo.error("Could not find the mixin " + name);
+			
+			applied.push(name);
+			
+			// we need to temporarily move the constructor if it has one so it
+			// will override the correct method - this is a one-time permanent
+			// runtime operation so subsequent additions of the mixin don't require
+			// it again
 			if (props.hasOwnProperty("constructor")) {
 				props._constructor = props.constructor;
 				delete props.constructor;
 			}
 			
+			delete props.name;
 			extend(props, proto);
+			
+			// now put it all back the way it was
+			props.name = name;
 		}
 	}
 	
@@ -40,27 +47,36 @@
 		@private
 	*/
 	function feature (ctor, props) {
-		var proto = ctor.prototype || ctor
-			, mixins = props.mixins;
-		
-		delete props.mixins;
-		
-		proto.mixins && (proto.mixins = proto.mixins.slice());
-		
-		forEach(mixins, function (ln) { apply(proto, ln); });
+		if (props.mixins) {
+			var proto = ctor.prototype || ctor
+				, mixins = props.mixins;
+			
+			delete props.mixins;
+			delete proto.mixins;
+			
+			proto._mixins && (proto._mixins = proto._mixins.slice());
+			forEach(mixins, function (ln) { apply(proto, ln); });
+		}
 	}
 	
+	enyo.kind.features.push(feature);
+	
+	var sup = enyo.kind.statics.extend;
+	
 	/**
-		Apply the ability to extend a kind by mixins a global feature of _enyo.kind_.
-		This will be executed before the kind's new props are applied.
-		
 		@private
-		@static
 	*/
-	enyo.concatHandler = function (ctor, props) {
-		sup.apply(this, arguments);
+	extend = enyo.kind.statics.extend = function (args, target) {
+		if (isArray(args)) {
+			return forEach(args, function (ln) { extend.call(this, ln, target); }, this);
+		}
 		
-		props.mixins && feature(ctor, props);
+		if (args.mixins) feature(target || this, args);
+		else if (isString(args)) apply(target || this.prototype, args);
+		else if (args.name) apply(target || this.prototype, args);
+		
+		
+		sup.apply(this, arguments);
 	};
 	
 	/**

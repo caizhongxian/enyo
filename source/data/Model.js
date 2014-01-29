@@ -17,7 +17,7 @@
 		@public
 		@class enyo.Model
 	*/
-	kind(
+	kind(ProxyObject,
 		/** @lends enyo.Model.prototype */ {
 		name: "enyo.Model",
 		kind: null,
@@ -26,7 +26,7 @@
 		/**
 			@private
 		*/
-		mixins: [ProxyObject, ObserverSupport, BindingSupport, EventEmitter],
+		mixins: [ObserverSupport, BindingSupport, EventEmitter],
 		
 		/**
 			@public

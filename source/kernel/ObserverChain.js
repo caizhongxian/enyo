@@ -5,21 +5,24 @@
 		, bind = enyo.bindSafely
 		, isObject = enyo.isObject
 		, forEach = enyo.forEach;
+		
+	var LinkedList = enyo.LinkedList
+		, LinkedListNode = enyo.LinkedListNode;
 	
-		function get (base, prop) {
-			return base && isObject(base)? (
-				base.get? base.get(prop): base[prop]
-			): undefined;
-		}
+	function get (base, prop) {
+		return base && isObject(base)? (
+			base.get? base.get(prop): base[prop]
+		): undefined;
+	}
 	
 	/**
 		@public
 		@class enyo.ObserverChainNode
 	*/
-	kind(
+	var ObserverChainNode = kind(
 		/** @lends enyo.ObserverChainNode.prototype */ {
 		name: "enyo.ObserverChainNode",
-		kind: enyo.LinkedListNode,
+		kind: LinkedListNode,
 		noDefer: true,
 		
 		/**
@@ -107,8 +110,8 @@
 	kind(
 		/** @lends enyo.ObserverChain.prototype */ {
 		name: "enyo.ObserverChain",
-		kind: enyo.LinkedList,
-		nodeKind: enyo.ObserverChainNode,
+		kind: LinkedList,
+		nodeKind: ObserverChainNode,
 		
 		/**
 			@private
