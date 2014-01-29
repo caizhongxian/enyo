@@ -69,7 +69,7 @@
 			binding.from = from[0] == "."? from.slice(1): from;
 			binding.to = to[0] == "."? to.slice(1): to;
 			
-			// now our sanitization
+			// now our sanitation
 			rdy = !! (
 				(source && isObject(source)) &&
 				(target && isObject(target)) &&
