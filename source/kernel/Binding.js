@@ -201,7 +201,7 @@
 				
 				// for two-way bindings we unregister the observer from
 				// the target as well
-				!this.oneWay && this.target.unobserve(this.to, this.onTarget);
+				!this.oneWay && this.target.unobserve(this.to, this.onTarget, this);
 				
 				this.connected = false;
 			}

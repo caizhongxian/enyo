@@ -1,11 +1,10 @@
 (function (enyo) {
 	
 	var kind = enyo.kind
-		, inherit = enyo.inherit
 		, forEach = enyo.forEach
-		, isArray = enyo.isArray;
-		
-	var LinkedList = enyo.LinkedList;
+		, isArray = enyo.isArray
+		, isString = enyo.isString
+		, indexOf = enyo.indexOf;
 		
 	/**
 		@private
@@ -14,18 +13,35 @@
 	kind(
 		/** @lends enyo.RecordList.prototype */ {
 		name: "enyo.RecordList",
-		kind: LinkedList,
+		kind: null,
+		
+		/**
+			@private
+		*/
+		length: 0,
 		
 		/**
 			@private
 			@method
 		*/
-		add: function (record) {
-			var loc = this.euidTable
-				, euid = record.euid
-				, node = this.createNode({model: record});
-
-			this.appendNode((loc[euid] = node));
+		add: function (record, idx) {
+			var loc = this.idTable
+				, models = this.models
+				, len = this.length
+				, euid, id;
+			
+			if (isArray(record)) return forEach(record, function (model) {
+				this.add(model, idx) && ++idx;
+			}, this);
+			
+			euid = record.euid;
+			id = record.attributes[record.primaryKey];
+			
+			id && (loc[id] = record);
+			loc[euid] = record;
+			if (!isNaN(idx) && idx < len) models.splice(idx, 0, record);
+			else models.push(record);
+			this.length = models.length;
 			return this;
 		},
 		
@@ -34,13 +50,16 @@
 			@method
 		*/
 		remove: function (record) {
-			var loc = this.euidTable
-				, node = this.has(record)
-				, euid = record.euid;
-			
-			node && this.deleteNode(node);
+			var loc = this.idTable
+				, models = this.models
+				, euid = record.euid
+				, id = record.attributes[record.primaryKey]
+				, idx = indexOf(record, models);
 			
 			delete loc[euid];
+			id && (delete loc[id]);
+			idx > -1 && models.splice(idx, 1);
+			this.length = models.length;
 			return this;
 		},
 		
@@ -49,11 +68,7 @@
 			@method
 		*/
 		records: function () {
-			var ret = [];
-			this.forward(function (node) {
-				ret.push(node.model);
-			});
-			return ret;
+			return this.models.slice();
 		},
 		
 		/**
@@ -61,8 +76,21 @@
 			@method
 		*/
 		has: function (record) {
-			// faster than find node anyways
-			return this.euidTable[record.euid];
+			var loc = this.idTable
+				, str = isString(record) || !isNaN(record)
+				, euid = !str && record.euid
+				, id = !str && record.attributes[record.primaryKey]
+				, model = str? loc[record]: (loc[euid] || loc[id]);
+			
+			return model;
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		at: function (idx) {
+			return this.models[idx];
 		},
 		
 		/**
@@ -70,21 +98,18 @@
 			@method
 		*/
 		constructor: function () {
-			this.euidTable = {};
+			this.idTable = {};
+			this.models = [];
 		},
 		
 		/**
 			@private
 			@method
 		*/
-		destroy: inherit(function (sup) {
-			return function () {
-				sup.apply(this, arguments);
-				
-				// free all nodes associated with this list
-				this.euidTable = null;
-			}
-		})
+		destroy: function () {
+			this.idTable = null;
+			this.models = null;
+		}
 			
 	});
 	

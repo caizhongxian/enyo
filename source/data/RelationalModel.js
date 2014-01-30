@@ -338,16 +338,18 @@
 		get: inherit(function (sup) {
 			return function (path) {
 				var prop = path
-					, parts;
+					, rel, parts;
 				
 				if (path.indexOf(".") >= 0) {
 					parts = path.split(".");
 					prop = parts.shift();
 				}
 				
-				return !this.isRelation(prop)? sup.apply(this, arguments):
-					parts? this.getRelation(prop).getRelated().get(parts.join(".")):
-					this.getRelation(prop).getRelated();
+				rel = this.isRelation(prop);
+				
+				return !rel? sup.apply(this, arguments):
+					parts? rel.getRelated().get(parts.join(".")):
+					rel.getRelated();
 			};
 		}),
 		
@@ -358,16 +360,18 @@
 		set: inherit(function (sup) {
 			return function (path, is, force) {
 				var prop = path
-					, parts;
+					, rel, parts;
 					
 				if (path.indexOf(".") >= 0) {
 					parts = path.split(".");
 					prop = parts.shift();
 				}
 				
-				return !this.isRelation(prop)? sup.apply(this, arguments):
-					parts? this.getRelation(part).getRelated().set(parts.join("."), is, force):
-					this.getRelation(prop).setRelated(is);
+				rel = this.isRelation(prop);
+				
+				return !rel? sup.apply(this, arguments):
+					parts? rel.getRelated().set(parts.join("."), is, force):
+					rel.setRelated(is);
 			};
 		}),
 		

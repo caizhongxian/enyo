@@ -11,7 +11,9 @@
 		, where = enyo.where
 		, find = enyo.find
 		, filter = enyo.filter
-		, store = enyo.store;
+		, store = enyo.store
+		, uid = enyo.uid
+		, json = enyo.json;
 	
 	var Component = enyo.Component
 		, EventEmitter = enyo.EventEmitter
@@ -22,10 +24,11 @@
 		@public
 		@class enyo.Collection
 	*/
-	kind(
+	var Collection = kind(
 		/** @lends enyo.Collection.prototype */ {
 		name: "enyo.Collection",
 		kind: Component,
+		noDefer: true,
 		
 		/**
 			@public
@@ -54,54 +57,171 @@
 			@public
 			@method
 		*/
-		add: function (add, opts) {
+		add: function (models, opts) {
 			var loc = this.records
 				, len = this.length
-				, model = this.model
-				, pkey = model.prototype.primaryKey
+				, ctor = this.model
+				, options = {merge: false, silent: false, purge: false, parse: false, create: true, find: true}
+				, pkey = ctor.prototype.primaryKey
 				, idx = len
-				, added;
-			
-			!isNaN(opts) && (idx = opts);
-			idx = Math.min(Math.max(0, idx), len);
-			opts = isObject(opts)? opts: this.options;
-			add = isArray(add)? add: [add];
-			
-			forEach(add, function (ln) {
-				var ent;
+				, added, removed, model, attrs, found, id;
 				
-				if (!(ln instanceof model)) {
-					if ((ent = loc.has(ln[pkey]))) {
-						if (opts.merge) ent.record.set(ln);
-						return;
-					}
-					
-					ln = this.create(ln);
-				} else if ((ent = loc.has(ln))) {
-					if (opts.merge) ent.record.set(ln.raw());
-					return;
+			// for backwards compatibility with earlier api standards we allow the
+			// second paramter to be the index and third param options when
+			// necessary
+			!isNaN(opts) && (idx = opts);
+			arguments.length > 2 && (opts = arguments[2]);
+			
+			// normalize options so we have values
+			opts = opts? mixin({}, [options, opts]): options;
+			
+			// our flags
+			var merge = opts.merge
+				, purge = opts.purge
+				, silent = opts.silent
+				, parse = opts.parse
+				, find = opts.find
+				, create = opts.create !== false;
+				
+			// for a special case purge to remove records that aren't in the current
+			// set being added
+				
+			// we treat all additions as an array of additions
+			isArray(models)? (models = models.slice()): (models = [models]);
+			
+			for (var i=0, end=models.length; i<end; ++i) {
+				model = models[i];
+				
+				if (!model) continue;
+				
+				// first determine if the model is an instance of model since
+				// everything else hinges on this
+				if (!(model instanceof Model)) {
+					// we need to determine how to handle this
+					attrs = model;
 				}
 				
-				loc.add(ln);
-				added || (added = []);
-				added.push(ln);
-			}, this);
+				id = attrs? attrs[pkey]: model;
+				
+				// see if we have an existing entry for this model/hash
+				found = loc.has(id);
+				
+				// if it already existed...
+				if (found) {
+					if (merge) {
+						attrs || (attrs = model.attributes);
+						parse && (attrs = found.parse(attrs));
+						found.set(attrs, opts);
+					}
+				} else if (find && (found = this.store.has(id))) {
+					// in this case we were asked to search our store for an existing record
+					// and we found one but we didn't previously have it so we are technically
+					// adding it
+					// @NOTE: Setting the _find_ option always assumes _merge_
+					attrs || (attrs = model.attributes);
+					parse && (attrs = found.parse(attrs));
+					added || (added = []);
+					added.push(found);
+					this.prepareRecord(found);
+					found.set(attrs, opts);
+				} else if (create) {
+					model = this.prepareRecord(attrs);
+					added || (added = []);
+					added.push(model);
+				}
+			}
+			
+			added && loc.add(added, idx);
+			
+			this.length = loc.length;
+			
+			if (!silent) {
+				// notify observers of the length change
+				len != this.length && this.notify("length", len, this.length);
+				// notify listeners of the addition of records
+				added && this.emit("add", {records: added});
+			}
+			return added;
 		},
 		
 		/**
 			@public
 			@method
 		*/
-		remove: function () {
-			
+		remove: function (models, opts) {
+			this.log(arguments);
+			// @TODO: LEFT OFF HERE
+			this.records.remove(models);
+			this.length = this.records.length;
 		},
 		
 		/**
 			@public
 			@method
 		*/
-		create: function () {
+		at: function (idx) {
+			return this.records.at(idx);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		raw: function () {
+			return map(this.records.records(), function (model) {
+				return model.raw();
+			});
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		has: function (model) {
+			return this.records(model);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		toJSON: function () {
+			return json.stringify(this.raw());
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		prepareRecord: function (attrs, opts) {
+			var ctor = this.model
+				, options = {owner: this}
+				, model;
 			
+			opts = opts? mixin({}, [options, opts]): options;
+			
+			attrs instanceof ctor && (model = attrs);
+			if (!model) model = new ctor(attrs, opts);
+			
+			model.on("*", this.onModelEvent, this);
+			
+			return model;
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		onModelEvent: function (model, e) {
+			this.log(arguments);
+			
+			switch (e) {
+			case "destroy":
+				this.remove(model);
+				break;
+			case "change":
+				break;
+			}
 		},
 		
 		/**
@@ -109,29 +229,44 @@
 			@method
 		*/
 		constructor: inherit(function (sup) {
-			return function (recs, props) {
+			return function (recs, props, opts) {
+				opts = opts? (this.options = mixin({}, [this.options, opts])): this.options;
 				
 				// if properties were passed in but not a records array
 				props = recs && !isArray(recs)? recs: props;
 				if (props === recs) recs = null;
 				// initialize our core records
-				this.records = [];
+				this.records = new RecordList();
 				
-				if (props.records) {
+				if (props && props.records) {
 					recs = recs? recs.concat(props.records): props.records.slice();
 					delete props.records;
 				}
 				
 				this.length = this.records.length;
-				this.store = this.store || store;
-				isString(this.model) && (this.model = constructorForKind(this.model));
-				
-				recs && recs.length && this.add(recs);
+				this.euid = uid("c");
 				
 				sup.call(this, props);
+				
+				recs && recs.length && this.add(recs, opts);
+				this.store = this.store || store;
+				isString(this.model) && (this.model = constructorForKind(this.model));
 			};
 		})
 	});
+	
+	/**
+		@private
+		@static
+	*/
+	Collection.concat = function (ctor, props) {
+		var proto = ctor.prototype || ctor;
+		
+		if (props.options) {
+			proto.options = mixin({}, [proto.options, props.options]);
+			delete props.options;
+		}
+	};
 	
 })(enyo);
 

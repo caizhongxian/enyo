@@ -71,15 +71,22 @@
 		silence: function () {
 			this._silenced = true;
 			this._silenceCount++;
+			return this;
 		},
 		
 		/**
 			@public
 			@method
 		*/
-		unsilence: function () {
-			this._silenceCount && this._silenceCount--;
-			this._silenceCount === 0 && (this._silenced = false);
+		unsilence: function (force) {
+			if (force) {
+				this._silenceCount = 0;
+				this._silenced = false;
+			} else {
+				this._silenceCount && this._silenceCount--;
+				this._silenceCount === 0 && (this._silenced = false);
+			}
+			return this;
 		},
 		
 		/**
@@ -154,7 +161,7 @@
 				, loc = eventTable[euid] || (eventTable[euid] = []);
 			
 			return !e? loc: filter(loc, function (ln) {
-				return ln.event == e;
+				return ln.event == e || ln.event == "*";
 			});
 		},
 		

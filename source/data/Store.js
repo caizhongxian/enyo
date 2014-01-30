@@ -11,14 +11,10 @@
 		@private
 		@class Store
 	*/
-	var Store = kind(
+	var Store = kind(EventEmitter,
 		/** @lends Store.prototype */ {
+		name: "enyo.Store",
 		kind: enyo.Object,
-		
-		/**
-			@private
-		*/
-		mixins: [EventEmitter],
 		
 		/**
 		*/
@@ -31,10 +27,6 @@
 		/**
 		*/
 		length: 0,
-		
-		/**
-		*/
-		records: null,
 		
 		/**
 		*/
@@ -51,13 +43,13 @@
 		/**
 		*/
 		computed: [
-			{method: "changeSet"}
+			{method: "changeset"}
 		],
 		
 		/**
 			@public
 		*/
-		changeSet: function () {
+		changeset: function () {
 			return {
 				changed: this.changed.records(),
 				destroyed: this.destroyed.records(),
@@ -132,27 +124,26 @@
 			@private
 			@method
 		*/
-		add: function (record) {
+		add: function (model) {
 			// @TODO: It should be possible to have a mechanism that delays this
 			// work until a timer runs out (that is reset as long as add is continuing
 			// to be called) and then flushes when possible unless a synchronous flush
 			// is forced?
 			
-			var records = this.records
+			var models = this.models
 				, created = this.created
 				, batch = this.batch;
 			
-			/*!this.has(record) && */records.add(record);
+			/*!this.has(model) && */models.add(model);
 			
-			record.on("change", this.onChange, this);
-			record.on("destroy", this.onDestroy, this);
+			model.on("*", this.onModelEvent, this);
 			
-			if (record.isNew && batch) {
-				created.add(record);
+			if (model.isNew && batch) {
+				created.add(model);
 				this.isDirty = true;
 			}
 			
-			this.length = records.length;
+			this.length = models.length;
 			return this;
 		},
 		
@@ -160,23 +151,22 @@
 			@private
 			@method
 		*/
-		remove: function (record) {
+		remove: function (model) {
 			
-			var records = this.records
+			var models = this.models
 				, created = this.created
 				, destroyed = this.destroyed
 				, batch = this.batch;
 				
-			if (this.has(record)) {
-				records.remove(record);
+			if (this.has(model)) {
+				models.remove(model);
 				
 				if (batch) {
-					record.isNew? created.remove(record): destroyed.add(record);
+					model.isNew? created.remove(model): destroyed.add(model);
 				}
 				
-				record.removeListener("change", this.onChange, this);
-				record.removeListener("destroy", this.onDestroy, this);
-				this.length = records.length;
+				!model.destroyed && model.removeListener("*", this.onModelEvent, this);
+				this.length = models.length;
 			}
 			
 			return this;
@@ -187,23 +177,31 @@
 			@method
 		*/
 		has: function (record) {
-			return this.records.has(record);
+			return this.models.has(record);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		at: function (idx) {
+			return this.models.at(idx);
 		},
 		
 		/**
 			@private
 			@method
 		*/
-		onChange: function () {
+		onModelEvent: function (model, e) {
 			this.log(arguments);
-		},
-		
-		/**
-			@private
-			@method
-		*/
-		onDestroy: function () {
-			this.log(arguments);
+			
+			switch (e) {
+			case "destroy":
+				this.remove(model);
+				break;
+			case "change":
+				break;
+			}
 		},
 		
 		/**
@@ -232,7 +230,7 @@
 				this.changed = new enyo.RecordList();
 				this.destroyed = new enyo.RecordList();
 				this.created = new enyo.RecordList();
-				this.records = new enyo.RecordList();
+				this.models = new enyo.RecordList();
 				
 				// our overloaded event emitter methods need storage for
 				// the listeners
