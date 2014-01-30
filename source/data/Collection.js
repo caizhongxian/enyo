@@ -64,7 +64,7 @@
 				, options = {merge: false, silent: false, purge: false, parse: false, create: true, find: true}
 				, pkey = ctor.prototype.primaryKey
 				, idx = len
-				, added, removed, model, attrs, found, id;
+				, added, keep, removed, model, attrs, found, id;
 				
 			// for backwards compatibility with earlier api standards we allow the
 			// second paramter to be the index and third param options when
@@ -87,7 +87,7 @@
 			// set being added
 				
 			// we treat all additions as an array of additions
-			isArray(models)? (models = models.slice()): (models = [models]);
+			!isArray(models) && (models = [models]);
 			
 			for (var i=0, end=models.length; i<end; ++i) {
 				model = models[i];
@@ -113,7 +113,17 @@
 						parse && (attrs = found.parse(attrs));
 						found.set(attrs, opts);
 					}
-				} else if (find && (found = this.store.has(this.model, id))) {
+					// with the purge flag we endeavor on the expensive track of removing
+					// those models currently in the collection that aren't in the incoming
+					// dataset and aren't being created
+					if (purge) {
+						keep || (keep = {length: 0});
+						// we simply need the euid the value doesn't matter and null is fastest
+						// assignment
+						keep[found.euid] = null;
+						keep.length++;
+					}
+				} else if (find && (found = this.store.has(ctor, id))) {
 					// in this case we were asked to search our store for an existing record
 					// and we found one but we didn't previously have it so we are technically
 					// adding it
@@ -122,13 +132,23 @@
 					parse && (attrs = found.parse(attrs));
 					added || (added = []);
 					added.push(found);
-					this.prepareRecord(found);
+					this.prepareModel(found);
 					found.set(attrs, opts);
 				} else if (create) {
-					model = this.prepareRecord(attrs);
+					model = this.prepareModel(attrs);
 					added || (added = []);
 					added.push(model);
 				}
+			}
+			
+			// here we process those models to be removed if purge was true
+			// the other guard is just in case we actually get to keep everything
+			// so we don't do this unnecessary pass
+			if (purge && keep && keep.length < len) {
+				removed || (removed = []);
+				for (i=0; i<len; ++i) !keep[(model = loc.at(i)).euid] && removed.push(model);
+				// if we removed any we process that now
+				removed.length && this.remove(removed, options);
 			}
 			
 			added && loc.add(added, idx);
@@ -139,7 +159,7 @@
 				// notify observers of the length change
 				len != this.length && this.notify("length", len, this.length);
 				// notify listeners of the addition of records
-				added && this.emit("add", {records: added});
+				added && this.emit("add", {/* for backward compatibility */ records: added, /* prefered */ models: added});
 			}
 			return added;
 		},
@@ -149,10 +169,56 @@
 			@method
 		*/
 		remove: function (models, opts) {
-			this.log(arguments);
-			// @TODO: LEFT OFF HERE
-			this.models.remove(models);
-			this.length = this.models.length;
+			var loc = this.models
+				, len = loc.length
+				, ctor = this.model
+				, options = {silent: false, destroy: false, complete: false}
+				, removed, model, idx;
+			
+			// normalize options so we have values
+			opts = opts? mixin({}, [options, opts]): options;
+			
+			// our flags
+			var silent = opts.silent
+				, destroy = opts.destroy
+				, complete = opts.complete;
+			
+			// we treat all additions as an array of additions
+			!isArray(models) && (models = [models]);
+			
+			// most features dependent on notification of this action can and should
+			// avoid needing the original indices of the models being removed
+			for (var i=0, end=models.length; i<end; ++i) {
+				model = models[i];
+				loc.remove(model);
+				// we know if it successfully removed the model because the length was
+				// updated accordingly
+				if (loc.length != len) {
+					removed || (removed = []);
+					removed.push(model);
+					
+					// if destroy is true then we call that now and it won't have duplicate remove
+					// requests because the event responder only calls remove if the model isn't
+					// destroyed and we can ignore the complete flag because it will automatically
+					// be removed from the store when it is destroyed
+					if (destroy) model.destroy(opts);
+					// we need to also remove it from the store if we can
+					else if (complete) this.store.remove(ctor, model);
+					// update our internal length because it was decremented
+					len = loc.length;
+				}
+			}
+			
+			// we have to update this value regardless so ensure we know the original in case
+			// we need to provide an update
+			len = this.length;
+			this.length = loc.length;
+			
+			if (!silent) {
+				len != this.length && this.notify("length", len, this.length);
+				removed && this.emit("remove", {/* for partial backward compatibility */records: removed, /* prefered */models: removed});
+			}
+			return removed;
 		},
 		
 		/**
@@ -168,7 +234,7 @@
 			@method
 		*/
 		raw: function () {
-			return map(this.models.models(), function (model) {
+			return this.models.map(function (model) {
 				return model.raw();
 			});
 		},
@@ -178,7 +244,55 @@
 			@method
 		*/
 		has: function (model) {
-			return this.models(model);
+			return this.models.has(model);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		contains: function (model) {
+			return this.has(model);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		forEach: function (fn, ctx) {
+			return this.models.forEach(fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		filter: function (fn, ctx) {
+			return this.models.filter(fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		find: function (fn, ctx) {
+			return this.models.find(fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		map: function (fn, ctx) {
+			return this.models.map(fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		indexOf: function (model, offset) {
+			return this.models.indexOf(model, offset);
 		},
 		
 		/**
@@ -193,7 +307,7 @@
 			@private
 			@method
 		*/
-		prepareRecord: function (attrs, opts) {
+		prepareModel: function (attrs, opts) {
 			var ctor = this.model
 				, options = {owner: this}
 				, model;

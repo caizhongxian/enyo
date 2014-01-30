@@ -18,7 +18,8 @@
 	var ProxyObject = enyo.ProxyObject
 		, ObserverSupport = enyo.ObserverSupport
 		, BindingSupport = enyo.BindingSupport
-		, EventEmitter = enyo.EventEmitter;
+		, EventEmitter = enyo.EventEmitter
+		, ModelList = enyo.ModelList;
 
 	/**
 		@public
@@ -200,5 +201,12 @@
 			delete props.options;
 		}
 	};
+	
+	/**
+		@private
+	*/
+	enyo.kind.features.push(function (ctor) {
+		!enyo.store.models[ctor.prototype.kindName] && (enyo.store.models[ctor.prototype.kindName] = new ModelList());
+	});
 
 })(enyo);

@@ -74,8 +74,8 @@
 			@public
 			@method
 		*/
-		models: function () {
-			return this._models.slice();
+		slice: function (from, to) {
+			return this._models.slice(from, to);
 		},
 		
 		/**
@@ -104,6 +104,14 @@
 			@public
 			@method
 		*/
+		indexOf: function (model, offset) {
+			return indexOf(model, this._models, offset);
+		},
+		
+		/**
+			@public
+			@method
+		*/
 		at: function (idx) {
 			return this._models[idx];
 		},
@@ -113,7 +121,7 @@
 			@method
 		*/
 		forEach: function (fn, ctx) {
-			return forEach(this.models(), fn, ctx || this);
+			return forEach(this.slice(), fn, ctx || this);
 		},
 		
 		/**
@@ -121,7 +129,7 @@
 			@method
 		*/
 		map: function (fn, ctx) {
-			return map(this.models(), fn, ctx || this);
+			return map(this.slice(), fn, ctx || this);
 		},
 		
 		/**
@@ -129,7 +137,7 @@
 			@method
 		*/
 		filter: function (fn, ctx) {
-			return filter(this.models(), fn, ctx || this);
+			return filter(this.slice(), fn, ctx || this);
 		},
 		
 		/**
@@ -137,7 +145,7 @@
 			@method
 		*/
 		find: function (fn, ctx) {
-			return find(this.models(), fn, ctx || this);
+			return find(this.slice(), fn, ctx || this);
 		},
 		
 		/**

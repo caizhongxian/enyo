@@ -27,10 +27,6 @@
 		
 		/**
 		*/
-		length: 0,
-		
-		/**
-		*/
 		changed: null,
 		
 		/**
@@ -131,20 +127,16 @@
 			// to be called) and then flushes when possible unless a synchronous flush
 			// is forced?
 			
-			var models = this.models[model.kindName] || (this.models[model.kindName] = new ModelList())
+			var models = this.models[model.kindName]
 				, created = this.created
 				, batch = this.batch;
 			
 			/*!this.has(model) && */models.add(model);
 			
 			model.on("*", this.onModelEvent, this);
+			model.isNew && batch && created.add(model);
 			
-			if (model.isNew && batch) {
-				created.add(model);
-				this.isDirty = true;
-			}
-			
-			this.length = models.length;
+			this.isDirty = batch;
 			return this;
 		},
 		
@@ -154,22 +146,22 @@
 		*/
 		remove: function (model) {
 			
-			var models = this.models
+			var models = this.models[model.kindName]
+				, len = models.length
 				, created = this.created
 				, destroyed = this.destroyed
 				, batch = this.batch;
 				
-			if (this.has(model)) {
-				models.remove(model);
-				
-				if (batch) {
-					model.isNew? created.remove(model): destroyed.add(model);
-				}
-				
+			models.remove(model);
+			if (models.length < len) {
+				batch && (model.isNew? created.remove(model): destroyed.add(model));
+				// we only need to remove the listener if the model isn't being removed
+				// because it was destroyed (if it is then it will remove all listeners
+				// more efficiently on its own)
 				!model.destroyed && model.removeListener("*", this.onModelEvent, this);
-				this.length = models.length;
 			}
 			
+			this.isDirty = batch;
 			return this;
 		},
 		
@@ -178,15 +170,16 @@
 			@method
 		*/
 		has: function (ctor, model) {
-			return this.models[ctor.prototype.kindName].has(model);
+			var models = this.models[ctor.prototype.kindName];
+			return models && models.has(model);
 		},
 		
 		/**
 			@public
 			@method
 		*/
-		at: function (idx) {
-			return this.models.at(idx);
+		contains: function (ctor, model) {
+			return this.has(ctor, model);
 		},
 		
 		/**
