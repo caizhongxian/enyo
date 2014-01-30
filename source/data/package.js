@@ -1,7 +1,7 @@
 enyo.depends(
 	"Source.js",
 	"sources",
-	"RecordList.js",
+	"ModelList.js",
 	"Store.js",
 	"Model.js",
 	"Collection.js",

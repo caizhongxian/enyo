@@ -18,7 +18,7 @@
 	var Component = enyo.Component
 		, EventEmitter = enyo.EventEmitter
 		, Model = enyo.Model
-		, RecordList = enyo.RecordList;
+		, ModelList = enyo.ModelList;
 	
 	/**
 		@public
@@ -58,7 +58,7 @@
 			@method
 		*/
 		add: function (models, opts) {
-			var loc = this.records
+			var loc = this.models
 				, len = this.length
 				, ctor = this.model
 				, options = {merge: false, silent: false, purge: false, parse: false, create: true, find: true}
@@ -113,7 +113,7 @@
 						parse && (attrs = found.parse(attrs));
 						found.set(attrs, opts);
 					}
-				} else if (find && (found = this.store.has(id))) {
+				} else if (find && (found = this.store.has(this.model, id))) {
 					// in this case we were asked to search our store for an existing record
 					// and we found one but we didn't previously have it so we are technically
 					// adding it
@@ -151,8 +151,8 @@
 		remove: function (models, opts) {
 			this.log(arguments);
 			// @TODO: LEFT OFF HERE
-			this.records.remove(models);
-			this.length = this.records.length;
+			this.models.remove(models);
+			this.length = this.models.length;
 		},
 		
 		/**
@@ -160,7 +160,7 @@
 			@method
 		*/
 		at: function (idx) {
-			return this.records.at(idx);
+			return this.models.at(idx);
 		},
 		
 		/**
@@ -168,7 +168,7 @@
 			@method
 		*/
 		raw: function () {
-			return map(this.records.records(), function (model) {
+			return map(this.models.models(), function (model) {
 				return model.raw();
 			});
 		},
@@ -178,7 +178,7 @@
 			@method
 		*/
 		has: function (model) {
-			return this.records(model);
+			return this.models(model);
 		},
 		
 		/**
@@ -236,14 +236,14 @@
 				props = recs && !isArray(recs)? recs: props;
 				if (props === recs) recs = null;
 				// initialize our core records
-				this.records = new RecordList();
+				this.models = new ModelList();
 				
 				if (props && props.records) {
 					recs = recs? recs.concat(props.records): props.records.slice();
 					delete props.records;
 				}
 				
-				this.length = this.records.length;
+				this.length = this.models.length;
 				this.euid = uid("c");
 				
 				sup.call(this, props);
@@ -516,7 +516,7 @@
 // 				add    = [],
 // 				// the copy of our internal records so we can remove indices already
 // 				// merged and not need to iterate over them again
-// 				local  = this.records.slice(),
+// 				local  = this.models.slice(),
 // 				// flag used during iterations to help break the loop for an incoming
 // 				// record if it was successfully merged
 // 				merged = false,
@@ -604,7 +604,7 @@
 // 		// unfiltered if necessary
 // 		if (this.filtered) { this.reset(); }
 // 			// the actual records array for the collection
-// 		var local = this.records,
+// 		var local = this.models,
 // 			// the array of indices of any records added to the collection
 // 			add   = [],
 // 			// the existing length prior to adding any records
@@ -701,14 +701,14 @@
 // 		// order safely being able to use the index we just found for both the
 // 		// splice and the return index
 // 		for (j=rr.length-1; !isNaN((i=rr[j])); --j) {
-// 			this.records.splice(i, 1);
+// 			this.models.splice(i, 1);
 // 			if (d[i] instanceof this.model) {
 // 				d[i].removeListener("change", this._recordChanged);
 // 				d[i].removeListener("destroy", this._recordDestroyed);
 // 			}
 // 		}
 // 		// fix up our new length
-// 		this.length = this.records.length;
+// 		this.length = this.models.length;
 // 		// now alert any observers of the length change
 // 		if (l != this.length) { this.notifyObservers("length", l, this.length); }
 // 		// trigger the event with the instances
@@ -731,11 +731,11 @@
 // 		// if the collection is filtered and this was called with no parameters
 // 		if (!records && this.filtered) {
 // 			var rr = this._uRecords;
-// 			l = this.records.length;
-// 			this._uRecords = this.records;
+// 			l = this.models.length;
+// 			this._uRecords = this.models;
 // 			this._uRecords = null;
-// 			this.records = rr;
-// 			this.length = this.records.length;
+// 			this.models = rr;
+// 			this.length = this.models.length;
 // 			this.filtered = false;
 // 			ch = true;
 // 		} else if (records && enyo.isArray(records)) {
@@ -745,17 +745,17 @@
 // 				// of course if we have already been filtered we don't reset the
 // 				// original
 // 				if (!this.filtered) {
-// 					this._uRecords = this.records.slice();
+// 					this._uRecords = this.models.slice();
 // 				}
 // 			}
-// 			l = this.records.length;
-// 			this.records = records.slice();
-// 			this.length = this.records.length;
+// 			l = this.models.length;
+// 			this.models = records.slice();
+// 			this.length = this.models.length;
 // 			ch = true;
 // 		}
 // 		if (ch) {
 // 			if (l !== this.length) { this.notifyObservers("length", l, this.length); }
-// 			this.triggerEvent("reset", {records: this.records});
+// 			this.triggerEvent("reset", {records: this.models});
 // 		}
 // 		return this;
 // 	},
@@ -780,7 +780,7 @@
 // 	removeAll: function () {
 // 		// no need to call reset prior to remove since it already checks
 // 		// for the filtered state and calls reset
-// 		return this.reset().remove(this.records);
+// 		return this.reset().remove(this.models);
 // 	},
 // 	/**
 // 		Removes all records from the collection and destroys them. This will still
@@ -823,7 +823,7 @@
 // 		a _reset()_ call is made to restore the entire dataset.
 // 	*/
 // 	indexOf: function (rec, offset) {
-// 		return enyo.indexOf(rec, this.records, offset);
+// 		return enyo.indexOf(rec, this.models, offset);
 // 	},
 // 	/**
 // 		Iterates over all the records in this collection, accepting the
@@ -867,7 +867,7 @@
 // 			}
 // 		} else {
 // 			this._activeFilterChanged();
-// 			fs = this.records.slice();
+// 			fs = this.models.slice();
 // 		}
 // 		return fs;
 // 	},
@@ -877,9 +877,9 @@
 // 		are requested (lazily).
 // 	*/
 // 	at: function (i) {
-// 		var r = this.records[i];
+// 		var r = this.models[i];
 // 		if (r && !(r instanceof this.model)) {
-// 			r = this.records[i] = this.createRecord(r, null, false);
+// 			r = this.models[i] = this.createRecord(r, null, false);
 // 		}
 // 		return r;
 // 	},
@@ -936,9 +936,9 @@
 // 			var d  = enyo.isArray(data)? data.slice(): null,
 // 				o  = opts || (data && !d? data: null);
 // 			if (o) { this.importProps(o); }
-// 			this.records = (this.records || []).concat(d? this.parse(d): []);
+// 			this.models = (this.models || []).concat(d? this.parse(d): []);
 // 			// initialized our length property
-// 			this.length = this.records.length;
+// 			this.length = this.models.length;
 // 			// we bind this method to our collection so it can be reused as an event listener
 // 			// for many records
 // 			this._recordChanged   = enyo.bindSafely(this, this._recordChanged);
@@ -994,7 +994,7 @@
 // 	importProps: function (p) {
 // 		if (p) {
 // 			if (p.records) {
-// 				this.records = this.records? this.records.concat(p.records): p.records;
+// 				this.models = this.models? this.models.concat(p.records): p.records;
 // 				delete p.records;
 // 			}
 // 			enyo.kind.statics.extend(p, this);
@@ -1021,7 +1021,7 @@
 // 		var relation = this.relation;
 // 		
 // 		if (relation && this.length && (!relation.isOwner || relation.inverseKey)) {
-// 			enyo.forEach(this.records, function (rec) {
+// 			enyo.forEach(this.models, function (rec) {
 // 				// @TODO!
 // 			}, this);
 // 		}

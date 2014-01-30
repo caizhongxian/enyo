@@ -5,7 +5,8 @@
 		, bind = enyo.bindSafely
 		, isFunction = enyo.isFunction;
 		
-	var EventEmitter = enyo.EventEmitter;
+	var EventEmitter = enyo.EventEmitter
+		, ModelList = enyo.ModelList;
 		
 	/**
 		@private
@@ -51,9 +52,9 @@
 		*/
 		changeset: function () {
 			return {
-				changed: this.changed.records(),
-				destroyed: this.destroyed.records(),
-				created: this.created.records()
+				changed: this.changed.models(),
+				destroyed: this.destroyed.models(),
+				created: this.created.models()
 			};
 		},
 		
@@ -130,7 +131,7 @@
 			// to be called) and then flushes when possible unless a synchronous flush
 			// is forced?
 			
-			var models = this.models
+			var models = this.models[model.kindName] || (this.models[model.kindName] = new ModelList())
 				, created = this.created
 				, batch = this.batch;
 			
@@ -176,8 +177,8 @@
 			@public
 			@method
 		*/
-		has: function (record) {
-			return this.models.has(record);
+		has: function (ctor, model) {
+			return this.models[ctor.prototype.kindName].has(model);
 		},
 		
 		/**
@@ -227,10 +228,10 @@
 		constructor: inherit(function (sup) {
 			return function () {
 				sup.apply(this, arguments);
-				this.changed = new enyo.RecordList();
-				this.destroyed = new enyo.RecordList();
-				this.created = new enyo.RecordList();
-				this.models = new enyo.RecordList();
+				this.changed = new ModelList();
+				this.destroyed = new ModelList();
+				this.created = new ModelList();
+				this.models = {"enyo.Model": new ModelList()};
 				
 				// our overloaded event emitter methods need storage for
 				// the listeners
