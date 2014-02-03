@@ -7,15 +7,23 @@
 		
 	var EventEmitter = enyo.EventEmitter
 		, ModelList = enyo.ModelList;
-		
+	
+	/**
+		@private
+	*/
+	var BaseStore = kind({
+		kind: enyo.Object,
+		mixins: [EventEmitter]
+	});
+	
 	/**
 		@private
 		@class Store
 	*/
-	var Store = kind(EventEmitter,
+	var Store = kind(
 		/** @lends Store.prototype */ {
 		name: "enyo.Store",
-		kind: enyo.Object,
+		kind: BaseStore,
 		
 		/**
 		*/
@@ -127,7 +135,7 @@
 			// to be called) and then flushes when possible unless a synchronous flush
 			// is forced?
 			
-			var models = this.models[model.kindName || "unknown"]
+			var models = this.models[model.kindName]
 				, created = this.created
 				, batch = this.batch;
 			

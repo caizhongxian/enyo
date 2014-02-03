@@ -16,15 +16,11 @@
 	For more information, see the documentation on [Creating
 	Kinds](key-concepts/creating-kinds.html) in the Enyo Developer Guide.
 */
-enyo.kind = function () {
-	var args = enyo.toArray(arguments)
-		, len = args.length
-		, props = args[len-1];
-	
-	var name = props.name || "";
+enyo.kind = function(inProps) {
+	var name = inProps.name || "";
 	// cannot defer unnamed kinds, kinds with static sections, or ones with
 	// noDefer flag set
-	if (!enyo.options.noDefer && name && !props.noDefer) {
+	if (!enyo.options.noDefer && name && !inProps.noDefer) {
 		// make a deferred constructor to avoid a lot of kind
 		// processing if we're never used
 		var DeferredCtor = function() {
@@ -47,17 +43,17 @@ enyo.kind = function () {
 		DeferredCtor._finishKindCreation = function() {
 			DeferredCtor._finishKindCreation = undefined;
 			enyo.setPath(name, undefined);
-			var FinalCtor = enyo.kind.finish(args);
+			var FinalCtor = enyo.kind.finish(inProps);
 			DeferredCtor._FinalCtor = FinalCtor;
-			props = null;
+			inProps = null;
 			return FinalCtor;
 		};
 		// copy public statics into DeferredCtor; note, this means
 		// public static items will need to be read-only since the
 		// deferrred kind constructor will have a different copy of
 		// non-object values than the final kind constructor
-		if (props.statics) {
-			enyo.mixin(DeferredCtor, props.statics);
+		if (inProps.statics) {
+			enyo.mixin(DeferredCtor, inProps.statics);
 		}
 		// always add the the extend capability for kinds even if they are
 		// deferred
@@ -75,23 +71,20 @@ enyo.kind = function () {
 		return DeferredCtor;
 	} else {
 		// create anonymous kinds immediately
-		return enyo.kind.finish(args);
+		return enyo.kind.finish(inProps);
 	}
 };
 //* @protected
-enyo.kind.finish = function(args) {
-	var len = args.length
-		, props = args.pop();
-	
+enyo.kind.finish = function(inProps) {
 	// kind-name to constructor map could be faulty now that a new kind exists, so we simply destroy the memoizations
 	enyo._kindCtors = {};
 	// extract 'name' property
-	var name = props.name || "";
-	delete props.name;
+	var name = inProps.name || "";
+	delete inProps.name;
 	// extract 'kind' property
-	var hasKind = ("kind" in props);
-	var kind = props.kind;
-	delete props.kind;
+	var hasKind = ("kind" in inProps);
+	var kind = inProps.kind;
+	delete inProps.kind;
 	// establish base class reference
 	var base = enyo.constructorForKind(kind);
 	var isa = base && base.prototype || null;
@@ -104,36 +97,20 @@ enyo.kind.finish = function(args) {
 	// make a boilerplate constructor
 	var ctor = enyo.kind.makeCtor();
 	// semi-reserved word 'constructor' causes problems with Prototype and IE, so we rename it here
-	if (props.hasOwnProperty("constructor")) {
-		props._constructor = props.constructor;
-		delete props.constructor;
+	if (inProps.hasOwnProperty("constructor")) {
+		inProps._constructor = inProps.constructor;
+		delete inProps.constructor;
 	}
 	// create our prototype
 	//ctor.prototype = isa ? enyo.delegate(isa) : {};
 	enyo.setPrototype(ctor, isa ? enyo.delegate(isa) : {});
-	
-	// if mixins were pushed into the arguments array before the final properties
-	// we need to apply those prior to the normal handling of mixins that are
-	// applied after-the-fact
-	if (len > 1) {
-		var fn = function (k, v) { return !(enyo.isFunction(v) || enyo.isInherited(v)); };
-		
-		forEach(args, function (ln) {
-			enyo.extendMethods(ctor, ln, true);
-			enyo.mixin(ctor.prototype, ln, fn);
-		});
-	}
-	
 	// there are special cases where a base class has a property
 	// that may need to be concatenated with a subclasses implementation
 	// as opposed to completely overwriting it...
-	enyo.concatHandler(ctor, props);
+	enyo.concatHandler(ctor, inProps);
 
 	// put in our props
-	if (len > 1) {
-		enyo.kind.extendMethods(ctor, props, true);
-		enyo.mixin(ctor.prototype, props, fn);
-	} else enyo.mixin(ctor.prototype, props);
+	enyo.mixin(ctor.prototype, inProps);
 	// alias class name as 'kind' in the prototype
 	// but we actually only need to set this if a new name was used,
 	// not if it is inheriting from a kind anonymously
@@ -149,7 +126,7 @@ enyo.kind.finish = function(args) {
 	// reference our real constructor
 	ctor.prototype.ctor = ctor;
 	// support pluggable 'features'
-	enyo.forEach(enyo.kind.features, function(fn){ fn(ctor, props); });
+	enyo.forEach(enyo.kind.features, function(fn){ fn(ctor, inProps); });
 	// put reference into namespace
 	if ((name && !enyo.getPath(name)) || enyo.kind.allowOverride) {
 		enyo.setPath(name, ctor);
@@ -272,7 +249,7 @@ enyo.kind.extendMethods = function(ctor, props, add) {
 		}
 	}
 };
-// enyo.kind.features.push(enyo.kind.extendMethods);
+enyo.kind.features.push(enyo.kind.extendMethods);
 
 //*@protected
 /**

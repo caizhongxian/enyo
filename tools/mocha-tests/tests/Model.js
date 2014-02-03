@@ -98,7 +98,6 @@ describe ("Model", function () {
 					model = new enyo.Model();
 					expect(model.get("prop1")).to.be.undefined;
 					expect(model.attributes.prop1).to.be.undefined;
-					debugger
 					model.set("prop1", true);
 					expect(model.get("prop1")).to.be.true;
 					expect(model.attributes.prop1).to.be.true;
@@ -130,9 +129,10 @@ describe ("Model", function () {
 			expect(enyo.store.models.NewKind2).to.exist.and.to.be.an.instanceof(enyo.ModelList);
 		});
 		it ("should properly be added to the store's enyo.Model category for an unnamed kind of model", function () {
+			var len = enyo.store.models["enyo.Model"].length;
 			ctor = enyo.kind({kind: "enyo.Model"});
 			model = new ctor();
-			expect(enyo.store.models["enyo.Model"].length).to.equal(1);
+			expect(enyo.store.models["enyo.Model"].length).to.equal(len+1);
 			enyo.store.models["enyo.Model"].remove(model);
 		});
 	});

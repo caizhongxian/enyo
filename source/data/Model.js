@@ -20,15 +20,23 @@
 		, BindingSupport = enyo.BindingSupport
 		, EventEmitter = enyo.EventEmitter
 		, ModelList = enyo.ModelList;
-		debugger
+	
+	/**
+		@private
+	*/
+	var BaseModel = kind({
+		kind: null,
+		mixins: [ProxyObject]
+	});
+	
 	/**
 		@public
 		@class enyo.Model
 	*/
-	var Model = kind(ProxyObject,
+	var Model = kind(
 		/** @lends enyo.Model.prototype */ {
 		name: "enyo.Model",
-		kind: null,
+		kind: BaseModel,
 		noDefer: true,
 		
 		/**
