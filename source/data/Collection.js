@@ -309,7 +309,7 @@
 		*/
 		prepareModel: function (attrs, opts) {
 			var ctor = this.model
-				, options = {owner: this}
+				, options = {owner: this, silent: true}
 				, model;
 			
 			opts = opts? mixin({}, [options, opts]): options;

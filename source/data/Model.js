@@ -192,7 +192,7 @@
 			// should be intelligent enough to avoid doing each individually or in some
 			// cases it may be useful to have a record that is never added to a store?
 			if (!opts || !opts.noAdd) {
-				this.store.add(this);
+				this.store.add(this, opts);
 			}
 		}
 	});

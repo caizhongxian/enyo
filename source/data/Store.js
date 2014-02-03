@@ -95,6 +95,38 @@
 			@private
 			@method
 		*/
+		emit: inherit(function (sup) {
+			return function (ctor, e) {
+				if (isFunction(ctor)) {
+					var listeners = this.scopeListeners(ctor, e);
+					
+					if (listeners.length) {
+						var args = toArray(arguments).slice(1);
+						args.unshift(this);
+						forEach(listeners, function (ln) {
+							ln.method.apply(ln.ctx, args);
+						});
+						return true;
+					}
+					return false;
+				}
+				
+				return sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@private
+			@method
+		*/
+		triggerEvent: function () {
+			return this.emit.apply(this, arguments);
+		},
+		
+		/**
+			@private
+			@method
+		*/
 		removeListener: inherit(function (sup) {
 			return function (ctor, e, fn) {
 				if (isFunction(ctor)) {
@@ -129,7 +161,7 @@
 			@private
 			@method
 		*/
-		add: function (model) {
+		add: function (model, opts) {
 			// @TODO: It should be possible to have a mechanism that delays this
 			// work until a timer runs out (that is reset as long as add is continuing
 			// to be called) and then flushes when possible unless a synchronous flush
@@ -144,6 +176,8 @@
 				model.on("*", this.onModelEvent, this);
 				model.isNew && batch && created.add(model);
 			}
+			
+			if (!opts || !opts.silent) this.emit(model, "add", {model: model});
 			
 			this.isDirty = batch;
 			return this;

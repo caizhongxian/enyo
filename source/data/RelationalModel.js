@@ -217,7 +217,7 @@
 			@method
 		*/
 		onChange: function () {
-			console.log("onChange", this, arguments);
+			console.log("enyo.toMany.onChange: ", this, arguments);
 		},
 		
 		/**
