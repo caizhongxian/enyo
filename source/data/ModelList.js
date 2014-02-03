@@ -41,11 +41,18 @@
 			euid = model.euid;
 			id = model.attributes[model.primaryKey];
 			
-			id && (loc[id] = model);
+			// id && !loc[id] && (loc[id] = model);
+			
+			if (id && loc[id]) {
+				model.headless = true;
+			} else loc[id] = model;
+			
 			loc[euid] = model;
-			if (!isNaN(idx) && idx < len) models.splice(idx, 0, model);
-			else models.push(model);
-			this.length = models.length;
+			if (!model.headless) {
+				if (!isNaN(idx) && idx < len) models.splice(idx, 0, model);
+				else models.push(model);
+				this.length = models.length;
+			}
 			return this;
 		},
 		
@@ -64,9 +71,11 @@
 				, idx = indexOf(model, models);
 			
 			delete loc[euid];
-			id && (delete loc[id]);
-			idx > -1 && models.splice(idx, 1);
-			this.length = models.length;
+			if (!model.headless) {
+				id && (delete loc[id]);
+				idx > -1 && models.splice(idx, 1);
+				this.length = models.length;
+			}
 			return this;
 		},
 		
@@ -83,6 +92,8 @@
 			@method
 		*/
 		has: function (model) {
+			if (model === undefined) return;
+			
 			var loc = this.idTable
 				, str = isString(model) || !isNaN(model)
 				, euid = !str && model.euid

@@ -102,6 +102,33 @@ describe ("Model", function () {
 					expect(model.get("prop1")).to.be.true;
 					expect(model.attributes.prop1).to.be.true;
 				});
+				it ("should update attributes with an object", function () {
+					model = new enyo.Model();
+					expect(model.get("prop1")).to.be.undefined;
+					expect(model.attributes.prop1).to.be.undefined;
+					expect(model.get("prop2")).to.be.undefined;
+					expect(model.attributes.prop2).to.be.undefined;
+					model.set({prop1: true, prop2: false});
+					expect(model.get("prop1")).to.be.true;
+					expect(model.attributes.prop1).to.be.true;
+					expect(model.get("prop2")).to.be.false;
+					expect(model.attributes.prop2).to.be.false;
+				});
+				it ("should emit a changed event when changes occur and not when they don't", function () {
+					var fn;
+					model = new enyo.Model({prop1: true, prop2: false, prop3: 1});
+					model.on("change", function () { throw new Error("change"); });
+					fn = function () {
+						model.set("prop1", true);
+					};
+					expect(fn).to.not.throw("change");
+					fn = function () {
+						model.set({prop2: true, prop3: 2});
+					};
+					expect(fn).to.throw("change");
+					expect(model.changed).to.exist.and.to.have.keys(["prop2", "prop3"]);
+					expect(model.previous).to.exist.and.to.have.keys(["prop2", "prop3"]);
+				});
 			});
 		});
 		describe ("Static Methods", function () {

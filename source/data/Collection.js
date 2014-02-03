@@ -61,7 +61,7 @@
 			var loc = this.models
 				, len = this.length
 				, ctor = this.model
-				, options = {merge: false, silent: false, purge: false, parse: false, create: true, find: true}
+				, options = {merge: true, silent: false, purge: false, parse: false, create: true, find: true}
 				, pkey = ctor.prototype.primaryKey
 				, idx = len
 				, added, keep, removed, model, attrs, found, id;

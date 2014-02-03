@@ -140,9 +140,10 @@
 				, batch = this.batch;
 			
 			/*!this.has(model) && */models.add(model);
-			
-			model.on("*", this.onModelEvent, this);
-			model.isNew && batch && created.add(model);
+			if (!model.headless) {
+				model.on("*", this.onModelEvent, this);
+				model.isNew && batch && created.add(model);
+			}
 			
 			this.isDirty = batch;
 			return this;
