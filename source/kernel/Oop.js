@@ -116,7 +116,12 @@ enyo.kind.finish = function(args) {
 	// we need to apply those prior to the normal handling of mixins that are
 	// applied after-the-fact
 	if (len > 1) {
-		enyo.kind.statics.extend(args, ctor.prototype);
+		var fn = function (k, v) { return !(enyo.isFunction(v) || enyo.isInherited(v)); };
+		
+		forEach(args, function (ln) {
+			enyo.extendMethods(ctor, ln, true);
+			enyo.mixin(ctor.prototype, ln, fn);
+		});
 	}
 	
 	// there are special cases where a base class has a property
@@ -125,7 +130,10 @@ enyo.kind.finish = function(args) {
 	enyo.concatHandler(ctor, props);
 
 	// put in our props
-	enyo.mixin(ctor.prototype, props);
+	if (len > 1) {
+		enyo.kind.extendMethods(ctor, props, true);
+		enyo.mixin(ctor.prototype, props, fn);
+	} else enyo.mixin(ctor.prototype, props);
 	// alias class name as 'kind' in the prototype
 	// but we actually only need to set this if a new name was used,
 	// not if it is inheriting from a kind anonymously
@@ -264,7 +272,7 @@ enyo.kind.extendMethods = function(ctor, props, add) {
 		}
 	}
 };
-enyo.kind.features.push(enyo.kind.extendMethods);
+// enyo.kind.features.push(enyo.kind.extendMethods);
 
 //*@protected
 /**

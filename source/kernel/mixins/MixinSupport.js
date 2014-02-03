@@ -75,8 +75,7 @@
 		if (args.mixins) feature(target || this, args);
 		else if (isString(args)) apply(target || this.prototype, args);
 		else if (args.name) apply(target || this.prototype, args);
-		
-		sup.apply(this, arguments);
+		else sup.apply(this, arguments);
 	};
 	
 	/**

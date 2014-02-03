@@ -20,7 +20,7 @@
 		, BindingSupport = enyo.BindingSupport
 		, EventEmitter = enyo.EventEmitter
 		, ModelList = enyo.ModelList;
-
+		debugger
 	/**
 		@public
 		@class enyo.Model
@@ -168,7 +168,7 @@
 			
 			// ensure we have a unique identifier that could potentially
 			// be used in remote systems
-			this.euid = uid("m");
+			this.euid = this.euid || uid("m");
 
 			// if necessary we need to parse the incoming attributes
 			attrs = attrs? opts.parse? this.parse(attrs): attrs: null;
@@ -206,7 +206,9 @@
 		@private
 	*/
 	enyo.kind.features.push(function (ctor) {
-		!enyo.store.models[ctor.prototype.kindName] && (enyo.store.models[ctor.prototype.kindName] = new ModelList());
+		if (ctor.prototype instanceof Model) {
+			!enyo.store.models[ctor.prototype.kindName] && (enyo.store.models[ctor.prototype.kindName] = new ModelList());
+		}
 	});
 
 })(enyo);

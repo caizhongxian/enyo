@@ -1,4 +1,4 @@
-describe ("Bindings", function () {
+describe ("Binding", function () {
 	describe("Kind", function () {
 		describe("Constructor", function () {
 			it ("should be a valid constructor", function () {

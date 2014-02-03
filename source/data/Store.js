@@ -127,7 +127,7 @@
 			// to be called) and then flushes when possible unless a synchronous flush
 			// is forced?
 			
-			var models = this.models[model.kindName]
+			var models = this.models[model.kindName || "unknown"]
 				, created = this.created
 				, batch = this.batch;
 			
