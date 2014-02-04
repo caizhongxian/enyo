@@ -13,6 +13,7 @@
 		, filter = enyo.filter
 		, store = enyo.store
 		, uid = enyo.uid
+		, mixin = enyo.mixin
 		, json = enyo.json;
 	
 	var Component = enyo.Component

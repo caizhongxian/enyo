@@ -3,6 +3,10 @@
 	var kind = enyo.kind
 		, inherit = enyo.inherit
 		, bind = enyo.bindSafely
+		, filter = enyo.filter
+		, toArray = enyo.toArray
+		, forEach = enyo.forEach
+		, mixin = enyo.mixin
 		, isFunction = enyo.isFunction;
 		
 	var EventEmitter = enyo.EventEmitter
@@ -127,7 +131,7 @@
 			@private
 			@method
 		*/
-		removeListener: inherit(function (sup) {
+		off: inherit(function (sup) {
 			return function (ctor, e, fn) {
 				if (isFunction(ctor)) {
 					var listeners = this.scopeListeners()
@@ -146,6 +150,14 @@
 				return sup.apply(this, arguments);
 			};
 		}),
+		
+		/**
+			@private
+			@method
+		*/
+		removeListener: function () {
+			return this.off.apply(this, arguments);
+		},
 		
 		/**
 			@private
@@ -177,7 +189,7 @@
 				model.isNew && batch && created.add(model);
 			}
 			
-			if (!opts || !opts.silent) this.emit(model, "add", {model: model});
+			if (!opts || !opts.silent) this.emit(model.ctor, "add", {model: model});
 			
 			this.isDirty = batch;
 			return this;
@@ -201,7 +213,7 @@
 				// we only need to remove the listener if the model isn't being removed
 				// because it was destroyed (if it is then it will remove all listeners
 				// more efficiently on its own)
-				!model.destroyed && model.removeListener("*", this.onModelEvent, this);
+				!model.destroyed && model.off("*", this.onModelEvent, this);
 			}
 			
 			this.isDirty = batch;
@@ -253,8 +265,35 @@
 			@public
 			@method
 		*/
-		findLocal: function (ctor, fn, opts) {
+		findLocal: function (ctor, fn, ctx, opts) {
+			var models = this.models[ctor.prototype.kindName]
+				, options = {all: true}
+				, found, method, ctx;
 			
+			// in cases where the request was merely passing a constructor
+			// we assume it was asking for all of the models for that type
+			if (arguments.length == 1) return models;
+			
+			// since we allow either a context and/or options hash as the
+			// third parameter we have to check to see if we have either
+			// and which is which
+			if (ctx && !ctx.kindName) opts = ctx;
+			opts = opts? mixin({}, [options, opts]): options;
+			
+			// and now the final check to make sure we have a context to run
+			// the method from
+			if (!ctx) ctx = opts.context || this;
+			
+			method = models && (opts.all? models.filter: models.where);
+			
+			// otherwise we attempt to iterate over the models if they exist
+			// applying the function and passing the options along
+			found = method && method.call(models, function (ln) {
+				return fn.call(ctx, ln, opts);
+			});
+			
+			// return the found model/models if any
+			return found;
 		},
 			
 		/**

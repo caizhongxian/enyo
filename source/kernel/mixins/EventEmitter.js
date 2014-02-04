@@ -24,6 +24,23 @@
 	/**
 		@private
 	*/
+	function removeListener(obj, e, fn, ctx) {
+		var listeners = obj.listeners()
+			, idx;
+			
+		if (listeners.length) {
+			idx = find(listeners, function (ln) {
+				return ln.event == e && ln.method === fn && ctx? ln.ctx === ctx: true;
+			});
+			idx >= 0 && listeners.splice(idx, 1);
+		}
+		
+		return obj;
+	}
+	
+	/**
+		@private
+	*/
 	function emit(obj, args) {
 		var len = args.length
 			, e = args[0]
@@ -119,16 +136,15 @@
 			@method
 		*/
 		removeListener: function (e, fn, ctx) {
-			var listeners = this.listeners()
-				, idx;
-			
-			if (listeners.length) {
-				idx = find(listeners, function (ln) {
-					return ln.event == e && ln.method === fn && ctx? ln.ctx === ctx: true;
-				});
-				idx >= 0 && listeners.splice(idx, 1);
-			}
-			return this;
+			return removeListener(this, e, fn, ctx);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		off: function (e, fn, ctx) {
+			return removeListener(this, e, fn, ctx);
 		},
 		
 		/**

@@ -7,7 +7,9 @@
 		, filter = enyo.filter
 		, isArray = enyo.isArray
 		, isString = enyo.isString
-		, indexOf = enyo.indexOf;
+		, indexOf = enyo.indexOf
+		, clone = enyo.clone
+		, where = enyo.where;
 		
 	/**
 		@public
@@ -157,6 +159,26 @@
 		*/
 		find: function (fn, ctx) {
 			return find(this.slice(), fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		where: function (fn, ctx) {
+			return where(this.slice(), fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		clone: function () {
+			var cpy = new this.ctor();
+			cpy.idTable = clone(this.idTable);
+			cpy._models = this._models.slice();
+			cpy.length = this.length;
+			return cpy;
 		},
 		
 		/**
