@@ -7,16 +7,79 @@ describe ("Relational Models", function () {
 		});
 		
 		describe ("Methods", function () {
+			var ctor = enyo.RelationalModel
+				, proto = ctor.prototype;
 		
 			describe ("#getRelation", function () {
+				
+				it ("should respond to the method getRelation", function () {
+					expect(proto).to.itself.respondTo("getRelation");
+				});
+				
+				it ("should return a relation instance if a relation exists for the requested key or falsy", function () {
+					var ctor, model;
+					
+					ctor = enyo.kind({
+						kind: "enyo.RelationalModel",
+						relations: [{
+							key: "testprop"
+						}]
+					});
+					
+					model = new ctor();
+					expect(model.getRelation("testprop")).to.exist.and.to.be.an.instanceof(enyo.toOne);
+					expect(model.getRelation("someotherprop")).to.not.be.ok;
+					model.destroy();
+				});
 				
 			});
 			
 			describe ("#isRelation", function () {
 				
+				it ("should respond to the method isRelation", function () {
+					expect(proto).to.itself.respondTo("isRelation");
+				});
+				
+				it ("should should return a relation instance if a relation exists for the requested key or falsy", function () {
+					var ctor, model;
+					
+					ctor = enyo.kind({
+						kind: "enyo.RelationalModel",
+						relations: [{
+							key: "testprop"
+						}]
+					});
+					
+					model = new ctor();
+					expect(model.isRelation("testprop")).to.exist.and.to.be.an.instanceof(enyo.toOne);
+					expect(model.isRelation("someotherprop")).to.not.be.ok;
+					model.destroy();
+				})
+				
 			});
 			
 			describe ("#get", function () {
+				
+				it ("should return an attribute value as expected", function () {
+					var model = new enyo.RelationalModel({testprop: true});
+					expect(model.get("testprop")).to.be.true;
+					model.destroy();
+				});
+				
+				it ("should return an instance of a model or collection when requesting a relation", function () {
+					var ctor, model;
+					
+					ctor = enyo.kind({
+						kind: "enyo.RelationalModel",
+						relations: [{
+							key: "testprop"
+						}]
+					});
+					
+					model = new ctor({testprop: {id: 0}});
+					expect(model.get("testprop")).to.exist.and.to.be.an.instanceof(enyo.RelationalModel);
+					model.destroy();
+				});
 				
 			});
 			
@@ -92,7 +155,20 @@ describe ("Relational Models", function () {
 			
 			describe ("#create", function () {
 				
-				it ("should create an instance from existing data when isOwner is true");
+				it ("should create an instance from existing data when isOwner is true", function () {
+					var ctor, model;
+					
+					ctor = enyo.kind({
+						kind: "enyo.RelationalModel",
+						relations: [{
+							key: "testprop"
+						}]
+					});
+					model = new ctor({testprop: {id: 0}});
+					expect(model.attributes.testprop).to.exist.and.to.be.an.instanceof(enyo.toOne);
+					expect(model.getRelation("testprop").related).to.exist.and.to.be.an.instanceof(enyo.RelationalModel);
+					model.destroy();
+				});
 				
 			});
 			

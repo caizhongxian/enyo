@@ -404,7 +404,7 @@
 					model = new model(null, null, modelOpts);
 					exists(related) && parse && (related = model.parse(related));
 					related && model.set(related);
-					related = model;
+					this.related = model;
 					model = this.model;
 				} else {
 					
@@ -596,6 +596,8 @@
 		set: inherit(function (sup) {
 			return function (path, is, force) {
 				path || (path = "");
+				
+				if (isObject(path)) return sup.apply(this, arguments);
 				
 				var prop = path
 					, rel, parts;
