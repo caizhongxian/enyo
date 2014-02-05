@@ -3,6 +3,7 @@
 		, clone = enyo.clone
 		, isObject = enyo.isObject
 		, isString = enyo.isString
+		, isFunction = enyo.isFunction
 		, forEach = enyo.forEach
 		, where = enyo.where
 		, mixin = enyo.mixin
@@ -11,11 +12,22 @@
 		, find = enyo.find
 		, map = enyo.map
 		, exists = enyo.exists
+		, oKeys = enyo.keys
+		, only = enyo.only
 		, store = enyo.store
 		, getPath = enyo.getPath;
 		
-	var Collection = enyo.Collection
-		, Model = enyo.Model;
+	var Model = enyo.Model
+		, Collection;
+		
+	/**
+		Private class for a collection that defaults its model kind to enyo.RelationalModel
+		as oppossed to enyo.Model.
+		
+		@private
+		@class
+	*/
+	Collection = kind({kind: enyo.Collection, model: "enyo.RelationalModel"});
 
 	/**
 	*/
@@ -80,10 +92,16 @@
 		constructor: function (instance, props) {
 			// apply any of the properties to ourself for reference
 			mixin(this, [relationDefaults, this.options, props]);
+			
 			// store a reference to the model we're relating
 			this.instance = instance;
 			// ensure we have a constructor for our related model kind
 			this.model = constructorForKind(this.model);
+			
+			// unless explicitly set by the user-definition we alter the default value
+			// here to "id" in non-owner relations
+			this.includeInJSON = !props.includeInJSON && !this.isOwner? (this.model.prototype.primaryKey || "id"): this.includeInJSON;
+			
 			// let the subkinds do their thing
 			this.init();
 		},
@@ -120,6 +138,7 @@
 			@method
 		*/
 		destroy: function () {
+			this.destroyed = true;
 			this.instance = null;
 		}
 	});
@@ -169,7 +188,7 @@
 			
 			// if the model property is used for the collection constructor then we
 			// use the model of this collection
-			if (model.prototype instanceof Collection) {
+			if (model.prototype instanceof enyo.Collection) {
 				collection = model;
 				model = collection.prototype.model;
 			}
@@ -224,6 +243,22 @@
 		},
 		
 		/**
+			@private
+			@method
+		*/
+		setRelated: inherit(function (sup) {
+			return function (related) {
+				// this should be safe because all models should pass this test
+				// and we've already scoped the reference to the constructor for
+				// quicker lookup
+				if (related && related instanceof Model) {
+					this.related.add(related);
+					return this.related;
+				} else return sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
 			@public
 			@method
 		*/
@@ -231,16 +266,13 @@
 			var ctor = this.model
 				, related = this.related
 				, inverseKey = this.inverseKey
-				, models = store.findLocal(ctor)
-				, found = []
 				, isOwner = this.isOwner
 				, inst = this.instance
-				, id = inst.get(inst.primaryKey);
+				, id = inst.get(inst.primaryKey)
+				, found;
 			
-			if (models && inverseKey) {
-				models.forEach(function (model) {
-					if (this.checkRelation(model)) found.push(model);
-				}, this);
+			if (inverseKey) {
+				found = store.findLocal(ctor, this.checkRelation, this);
 				
 				// we shouldn't need to update any records already present so we'll ignore
 				// duplicates for efficiency
@@ -287,8 +319,26 @@
 			@private
 			@method
 		*/
+		raw: function () {
+			var iJson = this.includeInJSON
+				, raw;
+			if (iJson === true) raw = this.related.raw();
+			else if (isString(iJson)) raw = this.related.map(function (model) {
+				return model.get(iJson);
+			});
+			else if (isArray(iJson)) raw = this.related.map(function (model) {
+				return only(iJson, model.raw());
+			});
+			else if (isFunction(iJson)) raw = iJson.call(this.instance, this.key, this);
+			return raw;
+		},
+		
+		/**
+			@private
+			@method
+		*/
 		onChange: function (sender, e, props) {
-			console.log("enyo.toMany.onChange: ", arguments);
+			// console.log("enyo.toMany.onChange: ", arguments);
 			
 			if (sender === store) {
 				if (e == "add") {
@@ -363,11 +413,12 @@
 					store.on(model, this.onChange, this);
 				}
 			}
-			
-			this.findRelated();
 			// ensure that the property points to us as the value
 			inst.attributes[key] = this;
+			// we need to know about all future changes
 			inst.on("change", this.onChange, this);
+			// attempt to find and or setup any related value that we can at this time
+			this.findRelated();
 		},
 		
 		/**
@@ -402,12 +453,14 @@
 			if (found) {
 				// remove our listener on the store if it's there because
 				// we don't need it anymore
-				store.off(ctor, this.onChange, this);
+				isOwner && store.off(ctor, this.onChange, this);
+				// we also establish this found entity as our related model
+				this.related = found;
 				// we try and establish the relation when possible
 				if (inverseKey) {
 					rel = found.getRelation(inverseKey);
 					
-					if (!rel && inverseType) rel.relations.push((rel = new inverseType(found, {
+					if (!rel) found.relations.push((rel = new inverseType(found, {
 						isOwner: !isOwner,
 						key: inverseKey,
 						inverseKey: key,
@@ -416,6 +469,18 @@
 						model: inst.ctor,
 						related: inst
 					})));
+					
+					switch (rel.kindName) {
+					case "enyo.toOne":
+						if (rel.related !== inst) rel.setRelated(inst);
+						break;
+					case "enyo.toMany":
+						// its unfortunate but we will allow this to attempt the add to avoid the
+						// double lookup hit - if it is already present on the next pass (via the
+						// store's add event) it will do hardly anything
+						rel.related.add(inst, {merge: false});
+						break;
+					}
 				}
 			}
 		},
@@ -436,12 +501,30 @@
 			@private
 			@method
 		*/
+		raw: function () {
+			var iJson = this.includeInJSON
+				, raw;
+			if (iJson === true) raw = this.related.raw();
+			else if (isString(iJson)) raw = this.related.get(iJson);
+			else if (isArray(iJson)) raw = only(iJson, this.related.raw());
+			else if (isFunction(iJson)) raw = iJson.call(this.instance, this.key, this);
+			return raw;
+		},
+		
+		/**
+			@private
+			@method
+		*/
 		onChange: function (sender, e, props) {
-			console.log("enyo.toOne.onChange", arguments);
+			var key = this.key;
+			
+			// console.log("enyo.toOne.onChange", arguments);
 			
 			if (sender === this.instance) {
 				if (e == "change") {
-					
+					if (key in props) {
+						this.findRelated();
+					}
 				}
 			}
 		}
@@ -480,6 +563,8 @@
 		*/
 		get: inherit(function (sup) {
 			return function (path) {
+				path || (path = "");
+				
 				var prop = path
 					, rel, parts;
 				
@@ -502,6 +587,8 @@
 		*/
 		set: inherit(function (sup) {
 			return function (path, is, force) {
+				path || (path = "");
+				
 				var prop = path
 					, rel, parts;
 					
@@ -517,6 +604,39 @@
 					rel.setRelated(is);
 			};
 		}),
+		
+		/**
+			@private
+			@method
+		*/
+		raw: function () {
+			var inc = this.includeKeys
+				, attrs = this.attributes
+				, keys = inc || oKeys(attrs)
+				, cpy = inc? only(inc, attrs): clone(attrs);
+				
+			forEach(keys, function (key) {
+				var rel = this.isRelation(key)
+					, ent = rel? rel.getRelated(): this.get(key);
+				if (!rel) {
+					if (isFunction(ent)) ent.call(this);
+					else if (ent && ent.raw) cpy[key] = ent.raw();
+					else cpy[key] = ent;
+				} else {
+					var iJson = rel.includeInJSON;
+					// special handling for relations as we need to ensure that
+					// they are indeed supposed to be included
+
+					// if it is a falsy value then we do nothing
+					if (!iJson) delete cpy[key];
+					// otherwise we leave it up to the relation to return the correct
+					// value for its settings
+					else cpy[key] = rel.raw();
+				}
+			}, this);
+			
+			return cpy;
+		},
 		
 		/**
 			@private

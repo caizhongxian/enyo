@@ -200,8 +200,10 @@
 	};
 	
 	/**
+		For backward compatibility we alias the EventEmitter mixin.
+	
 		@public
-		@mixin
+		@alias enyo.EventEmitter
 	*/
 	enyo.RegisteredEventSupport = enyo.EventEmitter;
 	

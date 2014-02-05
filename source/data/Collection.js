@@ -136,7 +136,7 @@
 					this.prepareModel(found);
 					found.set(attrs, opts);
 				} else if (create) {
-					model = this.prepareModel(attrs);
+					model = this.prepareModel(attrs || model);
 					added || (added = []);
 					added.push(model);
 				}
