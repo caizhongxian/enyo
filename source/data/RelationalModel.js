@@ -558,6 +558,14 @@
 		},
 		
 		/**
+			@public
+			@method
+		*/
+		fetchRelated: function () {
+			
+		},
+		
+		/**
 			@private
 			@method
 		*/
