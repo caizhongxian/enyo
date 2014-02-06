@@ -1,5 +1,7 @@
 describe ("Relational Models", function () {
 	
+	var Relational = enyo.RelationalModel;
+	
 	describe ("Kind", function () {
 		
 		describe ("Properties", function () {
@@ -7,8 +9,7 @@ describe ("Relational Models", function () {
 		});
 		
 		describe ("Methods", function () {
-			var ctor = enyo.RelationalModel
-				, proto = ctor.prototype;
+			var proto = Relational.prototype;
 		
 			describe ("#getRelation", function () {
 				
@@ -17,16 +18,15 @@ describe ("Relational Models", function () {
 				});
 				
 				it ("should return a relation instance if a relation exists for the requested key or falsy", function () {
-					var ctor, model;
+					var model;
 					
-					ctor = enyo.kind({
-						kind: "enyo.RelationalModel",
+					model = enyo.singleton({
+						kind: Relational,
 						relations: [{
 							key: "testprop"
 						}]
 					});
 					
-					model = new ctor();
 					expect(model.getRelation("testprop")).to.exist.and.to.be.an.instanceof(enyo.toOne);
 					expect(model.getRelation("someotherprop")).to.not.be.ok;
 					model.destroy();
@@ -41,16 +41,15 @@ describe ("Relational Models", function () {
 				});
 				
 				it ("should should return a relation instance if a relation exists for the requested key or falsy", function () {
-					var ctor, model;
+					var model;
 					
-					ctor = enyo.kind({
-						kind: "enyo.RelationalModel",
+					model = enyo.singleton({
+						kind: Relational,
 						relations: [{
 							key: "testprop"
 						}]
 					});
 					
-					model = new ctor();
 					expect(model.isRelation("testprop")).to.exist.and.to.be.an.instanceof(enyo.toOne);
 					expect(model.isRelation("someotherprop")).to.not.be.ok;
 					model.destroy();
@@ -61,7 +60,7 @@ describe ("Relational Models", function () {
 			describe ("#get", function () {
 				
 				it ("should return an attribute value as expected", function () {
-					var model = new enyo.RelationalModel({testprop: true});
+					var model = new Relational({testprop: true});
 					expect(model.get("testprop")).to.be.true;
 					model.destroy();
 				});
@@ -70,14 +69,14 @@ describe ("Relational Models", function () {
 					var ctor, model;
 					
 					ctor = enyo.kind({
-						kind: "enyo.RelationalModel",
+						kind: Relational,
 						relations: [{
 							key: "testprop"
 						}]
 					});
 					
 					model = new ctor({testprop: {id: 0}});
-					expect(model.get("testprop")).to.exist.and.to.be.an.instanceof(enyo.RelationalModel);
+					expect(model.get("testprop")).to.exist.and.to.be.an.instanceof(Relational);
 					model.destroy();
 				});
 				
@@ -87,7 +86,42 @@ describe ("Relational Models", function () {
 				
 			});
 			
+			describe ("#setLocal", function () {
+				it ("should set a local property not of the attributes object", function () {
+					var model = new Relational();
+					model.setLocal("localprop", true);
+					expect(model.localprop).to.be.true;
+					expect(model.attributes.localprop).to.not.exist;
+					model.destroy();
+				});
+			});
+			
 			describe ("#raw", function () {
+				
+				it ("should return an object literal with the attributes of the model", function () {
+					var model = new Relational({prop1: true, prop2: false});
+					expect(model.raw()).to.eql({prop1: true, prop2: false});
+					model.destroy();
+				});
+				
+				it ("should return only the keys requested in the includeKeys array", function () {
+					var model;
+					
+					model = enyo.singleton({
+						kind: Relational,
+						includeKeys: ["id", "testprop"],
+						relations: [{
+							key: "testprop",
+							includeInJSON: "id"
+						}, {
+							key: "otherprop"
+						}]
+					});
+
+					model.set({id: 345, testprop: 10, otherprop: {id: 456}});
+					expect(model.raw()).to.eql({id: 345, testprop: 10});
+					model.destroy();
+				});
 				
 			});
 			
@@ -100,6 +134,10 @@ describe ("Relational Models", function () {
 			});
 			
 			describe ("#destroy", function () {
+				
+				it ("should destroy all relations");
+				it ("should cause all relations with isOwner true to destroy their models as well");
+				it ("should cause a remote destroy attempt when option complete is true");
 				
 			});
 		
@@ -159,7 +197,7 @@ describe ("Relational Models", function () {
 					var ctor, model;
 					
 					ctor = enyo.kind({
-						kind: "enyo.RelationalModel",
+						kind: Relational,
 						relations: [{
 							key: "testprop"
 						}]

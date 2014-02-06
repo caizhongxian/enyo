@@ -425,6 +425,40 @@
 			@public
 			@method
 		*/
+		setRelated: inherit(function (sup) {
+			return function (related) {
+				if (related && related instanceof Model) {
+					return sup.apply(this, arguments);
+				} else if (exists(related)) {
+					var val = related;
+					related = this.getRelated();
+					
+					// the only thing we can do is assume the value is intended to be the primary
+					// key of the model just like we would had it been passed into the constructor
+					if (this.create && related) related.set(related.primaryKey, val);
+					// otherwise we allow it to be set and try and find the model from this new
+					// criterion but we don't do all the notifications for it as code expecting
+					// an instance may be disappointed (e.g. break, die, suicide, self-destruct...)
+					else {
+						this.related = related;
+						related = this.findRelated();
+						// if it was found by this new value somehow we allow the original
+						// set to take place so it will notify everyone
+						related && related instanceof Model && sup.call(this, related);
+					}
+				}
+				
+				// @TODO: This ignores cases that it might be set as null or undefined which
+				// would clear the related but most of the code assumes there will always be
+				// a value for related but it seems _possible_ that this behavior may be
+				// necessary so would need to find a way to handle that
+			};
+		}),
+		
+		/**
+			@public
+			@method
+		*/
 		fetchRelated: function () {
 		},
 		
@@ -483,6 +517,8 @@
 					}
 				}
 			}
+			
+			return found;
 		},
 		
 		/**
