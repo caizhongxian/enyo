@@ -105,122 +105,6 @@
 		return next && next.prototype? enyo.checkConstructor(next): next;
 	};
 	
-	var localRegex = /(\(|\))/g
-		, localMatch = /^\(.*\)$/;
-	
-	/**
-		@public
-		@method
-	*/
-	var getLocal = enyo.getLocal = function (path) {
-		// we're trying to catch only null/undefined not empty string or 0 cases
-		if (!path && !enyo.exists(path)) return path;
-	
-		// obviously there is a severe penalty for requesting get with a path lead
-		// by unnecessary relative notation...
-		if (path[0] == ".") path = path.replace(/^\.+/, "");
-	
-		// in cases where a chained path is requested we can't safely rely on
-		// getPath to handle it as it may be a mixed path
-		if (path.indexOf(".") > -1) {
-			var parts = path.split(".")
-				, part = parts.shift()
-				, next = this
-				, loc = false;
-			
-			do {
-				// one change from getPath is that we need to look for the special
-				// notation and parse it out if necessary
-				localMatch.test(part) && (loc = true) && (part = part.replace(localRegex, ""));
-			
-				// for constructors we must check to make sure they are undeferred before
-				// looking for static properties
-				if (next.prototype) next = enyo.checkConstructor(next);
-				// for the auto generated or provided published property support we have separate
-				// routines that must be called to preserve compatibility
-				if (next._getters && (getter = next._getters[part])) next = next[getter]();
-				// for all other special cases to ensure we use any overloaded getter methods
-				else if (!loc && next.get && next !== this) next = next.get(part);
-				else if (loc && next.getLocal && next !== this) next = next.getLocal(part);
-				// and for regular cases
-				else next = next[part];
-				// reset our local flag
-				loc = false;
-			} while (next && (part = parts.shift()));
-		
-			return next && next.prototype? checkConstructor(next): next;
-		}
-	
-		// we have to ensure that the single path isn't wrapped
-		path[0] == "(" && (path = path.replace(localRegex, ""));
-	
-		// the simple case
-		return getPath.call(this, path);
-	};
-	
-	/**
-		@public
-		@method
-	*/
-	var setLocal = enyo.setLocal = function (path, is, force) {
-		// @TODO: Chained path...
-		
-		
-		path[0] == "(" && (path = path.replace(localRegex, ""));
-		return setPath.call(this, path, is, force);	
-	};
-	
-	/*enyo.getPath = function (path) {
-		// in case nothing is passed or null, we return it to keep it from
-		// failing the other cases
-		if (path === undefined || null === path) { return path; }
-		// in almost all cases when calling and enyo is the context global is
-		// the intended scope
-		var b = (this === enyo? enyo.global: this),
-			// strip leading `.` without adding to the stack when possible
-			p = (path[0] == "."? path.replace(/^\.+/, ""): path);
-		// break setting variables and doing work because if stripping all "."
-		// left us with nothing in the string then we just return the discovered scope object
-		if (!p) { return b; }
-		// simply split it on "." and try and run down the path without recursively
-		// executing the getter
-		var ps = p.split("."),
-			// the final property
-			pr = ps.pop(),
-			// ultimately the value we intend to return
-			v, fn;
-		for (var i=0, r$; (r$=ps[i]); ++i) {
-			// this will retrieve the requested element if it has a getter we call this
-			// to account for computed properties, default getters are used when present.
-			// these are carefully ordered in terms of likeliness to encounter thus
-			// reducing the number of checks that need to be executed
-			if (b) {
-				if (b._isObject) {
-					if (b._getters && (fn = b._getters[r$])) {
-						b = b[fn]();
-					} else {
-						b = b[r$];
-					}
-				} else {
-					// check for undeferral of kind constructors before use
-					if ("function" == typeof b) {
-						b = enyo.checkConstructor(b);
-					}
-					b = b[r$];
-				}
-			}
-			if (!b) { break; }
-		}
-		// if the index isn't the same as the length of parts (including the 0 case)
-		// then there was an error in the path and it couldn't be determined
-		// so we return undefined
-		if (i != ps.length) { return; }
-		// otherwise we grab the final property from the base we now have, check if its a
-		// deferred constructor, and return it
-		v = b[pr];
-		return (("function" == typeof v && enyo.checkConstructor(v)) || v);
-	};*/
-
 	//*@protected
 	//* Simplified version of enyo.getPath used internally for get<Name> calls.
 	//* This is able to handle basic and computed properties
@@ -235,8 +119,9 @@
 		return (("function" == typeof v && enyo.checkConstructor(v)) || v);
 	};
 
-	//*@public
 	/**
+	
+		@TODO: Out of date...
 		A global setter that takes a string path (relative to the method's
 		execution context) or a full path (relative to window). Attempts
 		to automatically retrieve any previously existing value to supply
@@ -246,65 +131,110 @@
 		value, observers will not be triggered by default. If the third
 		parameter is present and is an explicit boolean true, the observers
 		will be triggered regardless. Returns the context from which the method was executed.
+	
+		@public
+		@method enyo.setPath
 	*/
-	var setPath = enyo.setPath = function (path, value, force) {
-		// in almost all cases when calling and enyo is the context global is
-		// the intended scope
-		var b = (this === enyo? enyo.global: this), c = b;
-		// if the path is nothing, undefined or null, or an empty string even
-		// we can't do anything so we return this
-		if (!path) { return b; }
-		// strip leading `.` without adding to the stack when possible
-		var p = (path[0] == "."? path.replace(/^\.+/, ""): path);
-		// if the string is empty then we won't process anything else either
-		if (!p) { return b; }
-		// simply split it on "." and try and run down the path without recursively
-		// executing the getter
-		var ps = p.split("."),
-			// the final property
-			pr = ps.pop(),
-			// placeholder during iterations over the path,
-			// the previous value and a helper variable in case we find a computed property
-			tp, rv, fn;
-		for (var i=0, r$; (r$=ps[i]); ++i) {
-			// unfortunately it is possible to request the actual "enyo" object in
-			// a path so we have to test for this case or bad things happen
-			if (r$ == "enyo" && enyo === b) { continue; }
-			// its actually pretty simple, check to see if the next requested context exists and is an object
-			// or a function, if so, we use that and continue, otherwise we have to create it
-			if ((tp = b[r$])) {
-				if (typeof tp === "object") {
-					b = tp;
-				}
-				else if (typeof tp == "function") {
-					// in the rare case that our path includes a computed property (as part of
-					// chain -- this really is rare but not impossible) we use the getter to retrieve
-					// it correctly
-					if (b._isObject && b.computed && b.computed[r$] != null) {
-						b = b.get(r$);
-					} else if (isDeferredConstructor(tp)) {
-						// ensure this isn't a constructor that needs to be undeferred
-						b = enyo.checkConstructor(tp);
-					} else {
-						b = tp;
-					}
-				}
-			}
+	var setPath = enyo.setPath = function (path, is, opts) {
+		// we're trying to catch only null/undefined not empty string or 0 cases
+		if (!path && !enyo.exists(path)) return this;
+		
+		var next = (this === enyo? enyo.global: this)
+			, base = next
+			, parts, part, was, force;
+		
+		// for backwards compatibility
+		force = isObject(opts)? opts.force: opts;
+		
+		// obviously there is a severe penalty for requesting get with a path lead
+		// by unnecessary relative notation...
+		if (path[0] == ".") path = path.replace(/^\.+/, "");
+		
+		// here's where we check to make sure we have a truthy string-ish
+		if (!path) return next;
+		
+		parts = path.split(".");
+		part = parts.shift();
+		
+		do {
+			
+			if (!parts.length) was = next.get? next.get(part): next[part];
 			else {
-				// if it wasn't present we instantiate the path and use that object
-				b = b[r$] = {};
+				if (next.prototype) next = enyo.checkConstructor(next);
+				next = (next !== base && next.get? next.get(part): next[part]) || (next[part] = {});
 			}
-		}
-		// now we can attempt to retrieve a previous value if it can be done in as
-		// efficient a manner as possible -- we will call an overloaded getter if necessary
-		rv = (b && b._isObject && b._getters && (fn=b._getters[pr])) ? b[fn]() : b[pr];
-		// now we set the new value, much simpler
-		b[pr] = value;
-		// only notify if the value has changed or if the update should be forced
-		if (b.notifyObservers && rv !== value || force) { b.notifyObservers(pr, rv, value); }
-		// return the original base reference we made in the first line
-		return c;
+			
+		} while (parts.length && (part = parts.shift()));
+		
+		// now update to the new value
+		next[part] = is;
+		
+		// if possible we notify the changes but this change is notified from the immediate
+		// parent not the root object (could be the same)
+		if (next.notify && (force || was !== is || (opts && opts.comparator && opts.comparator(was, is)))) next.notify(part, was, is);
+		// we will always return the original root-object of the call
+		return base;
 	};
+	
+	
+	// var setPath = enyo.setPath = function (path, value, force) {
+	// 	// in almost all cases when calling and enyo is the context global is
+	// 	// the intended scope
+	// 	var b = (this === enyo? enyo.global: this), c = b;
+	// 	// if the path is nothing, undefined or null, or an empty string even
+	// 	// we can't do anything so we return this
+	// 	if (!path) { return b; }
+	// 	// strip leading `.` without adding to the stack when possible
+	// 	var p = (path[0] == "."? path.replace(/^\.+/, ""): path);
+	// 	// if the string is empty then we won't process anything else either
+	// 	if (!p) { return b; }
+	// 	// simply split it on "." and try and run down the path without recursively
+	// 	// executing the getter
+	// 	var ps = p.split("."),
+	// 		// the final property
+	// 		pr = ps.pop(),
+	// 		// placeholder during iterations over the path,
+	// 		// the previous value and a helper variable in case we find a computed property
+	// 		tp, rv, fn;
+	// 	for (var i=0, r$; (r$=ps[i]); ++i) {
+	// 		// unfortunately it is possible to request the actual "enyo" object in
+	// 		// a path so we have to test for this case or bad things happen
+	// 		if (r$ == "enyo" && enyo === b) { continue; }
+	// 		// its actually pretty simple, check to see if the next requested context exists and is an object
+	// 		// or a function, if so, we use that and continue, otherwise we have to create it
+	// 		if ((tp = b[r$])) {
+	// 			if (typeof tp === "object") {
+	// 				b = tp;
+	// 			}
+	// 			else if (typeof tp == "function") {
+	// 				// in the rare case that our path includes a computed property (as part of
+	// 				// chain -- this really is rare but not impossible) we use the getter to retrieve
+	// 				// it correctly
+	// 				if (b._isObject && b.computed && b.computed[r$] != null) {
+	// 					b = b.get(r$);
+	// 				} else if (isDeferredConstructor(tp)) {
+	// 					// ensure this isn't a constructor that needs to be undeferred
+	// 					b = enyo.checkConstructor(tp);
+	// 				} else {
+	// 					b = tp;
+	// 				}
+	// 			}
+	// 		}
+	// 		else {
+	// 			// if it wasn't present we instantiate the path and use that object
+	// 			b = b[r$] = {};
+	// 		}
+	// 	}
+	// 	// now we can attempt to retrieve a previous value if it can be done in as
+	// 	// efficient a manner as possible -- we will call an overloaded getter if necessary
+	// 	rv = (b && b._isObject && b._getters && (fn=b._getters[pr])) ? b[fn]() : b[pr];
+	// 	// now we set the new value, much simpler
+	// 	b[pr] = value;
+	// 	// only notify if the value has changed or if the update should be forced
+	// 	if (b.notifyObservers && rv !== value || force) { b.notifyObservers(pr, rv, value); }
+	// 	// return the original base reference we made in the first line
+	// 	return c;
+	// };
 
 	//*@protected
 	//* Simplified version of enyo.setPath used on set<Name> calls
@@ -401,7 +331,7 @@
 	var isArray = enyo.isArray;
 
 	//* Returns true if the argument is an object.
-	enyo.isObject = Object.isObject || function (it) {
+	var isObject = enyo.isObject = Object.isObject || function (it) {
 		// explicit null/undefined check for IE8 compatibility
 		return (it != null) && (toString.call(it) === "[object Object]");
 	};
