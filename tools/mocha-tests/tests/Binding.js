@@ -116,16 +116,22 @@ describe ("Binding", function () {
 					obj1.set("obj1proxyprop", "obj1proxyvalue");
 					obj1.setLocal("obj1localprop", "obj1localvalue");
 					obj2.setLocal("ambiguousprop", "incorrectvalue");
+					obj2.setLocal("sharedlocalprop", "firstsharedvalue");
 					obj2.set("ambiguousprop", "correctvalue");
 					
 					obj2.binding({from: "obj1localprop", to: "obj1localprop", source: obj1, local: enyo.Binding.LOCAL_FROM});
 					obj2.binding({from: "obj1proxyprop", to: "obj1proxyprop", source: obj1});
 					obj2.binding({from: "ambiguousprop", to: "ambiguousprop", target: obj1, local: enyo.Binding.LOCAL_TO});
+					obj2.binding({from: "sharedlocalprop", to: "sharedlocalprop", target: obj1, local: enyo.Binding.LOCAL_BOTH, oneWay: false});
 					// expect that the from-local property was set to the proxy object
 					expect(obj2.content.obj1localprop).to.exist.and.to.equal("obj1localvalue");
 					// expect that the to-local property was set from the proxy object
 					expect(obj1.ambiguousprop).to.exist.and.to.equal("correctvalue");
 					expect(obj2.content.obj1proxyprop).to.exist.and.to.equal("obj1proxyvalue");
+					expect(obj1.sharedlocalprop).to.exist.and.to.equal("firstsharedvalue");
+					
+					obj1.setLocal("sharedlocalprop", "secondsharedvalue");
+					expect(obj2.sharedlocalprop).to.exist.and.to.equal("secondsharedvalue");
 					
 					obj1.destroy();
 					obj2.destroy();
