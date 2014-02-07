@@ -403,7 +403,7 @@
 				if (create) {
 					model = new model(null, null, modelOpts);
 					exists(related) && parse && (related = model.parse(related));
-					related && model.set(related);
+					related && (isObject(related)? model.set(related): model.set(model.primaryKey, related));
 					this.related = model;
 					model = this.model;
 				} else {

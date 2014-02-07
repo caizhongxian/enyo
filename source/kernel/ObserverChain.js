@@ -58,7 +58,7 @@
 			var obj = this.object
 				, obs = this.onChange
 				, prop = this.property;
-			obj && obj.observe && obj.observe(prop, obs, this, true);
+			obj && obj.observe && obj.observe(prop, obs, this, {noChain: true});
 		},
 		
 		/**
@@ -189,6 +189,7 @@
 					// force it onto our current nodes property and let the special handling
 					// in ObserverChainNode and ObserverSupport handle the rest
 					$ && (prop = "$." + prop);
+					
 					node = this.createNode({property: prop, object: next, list: this});
 					this.appendNode(node);
 					next = get(next, prop);

@@ -14,10 +14,6 @@
 	var DIRTY_FROM = 0x01
 		, DIRTY_TO = 0x02;
 	
-	var LOCAL_FROM = 0x01
-		, LOCAL_TO = 0x02
-		, LOCAL_BOTH = 0x04;
-	
 	/**
 		@private
 		@method
@@ -146,11 +142,6 @@
 		/**
 			@public
 		*/
-		local: null,
-		
-		/**
-			@public
-		*/
 		transform: null,
 		
 		/**
@@ -188,7 +179,7 @@
 					
 					// for two-way bindings we register to observe changes
 					// from the target
-					!this.oneWay && this.target.observe(this.to, this.onTarget, this);
+					if (!this.oneWay) this.target.observe(this.to, this.onTarget, this);
 					
 					// we flag it as having been connected
 					this.connected = true;
@@ -226,20 +217,19 @@
 					, target = this.target
 					, from = this.from
 					, to = this.to
-					, local = this.local
 					, xform = this.getTransform()
 					, val;
 					
 				switch (this.dirty) {
 				case DIRTY_FROM:
-					val = local && source.getLocal && (local & LOCAL_FROM || local & LOCAL_BOTH) ? source.getLocal(from): source.get(from);
+					val = source.get(from);
 					xform && (val = xform(val, DIRTY_FROM, this));
-					!this._stop && (local && target.setLocal && (local & LOCAL_TO || local & LOCAL_BOTH)? target.setLocal(to, val): target.set(to, val));
+					!this._stop && target.set(to, val);
 					break;
 				case DIRTY_TO:
-					val = local && target.getLocal && (local & LOCAL_TO || local & LOCAL_BOTH)? target.getLocal(to): target.get(to);
+					val = target.get(to);
 					xform && (val = xform(val, DIRTY_TO, this));
-					!this._stop && (local && source.setLocal && (local & LOCAL_FROM || local & LOCAL_BOTH)? source.setLocal(from, val): source.set(from, val));
+					!this._stop && source.set(from, val);
 					break;
 				}
 				this.dirty = null;
@@ -355,24 +345,6 @@
 		@static
 	*/
 	enyo.Binding.DIRTY_TO = DIRTY_TO;
-	
-	/**
-		@public
-		@static
-	*/
-	enyo.Binding.LOCAL_FROM = LOCAL_FROM;
-	
-	/**
-		@public
-		@static
-	*/
-	enyo.Binding.LOCAL_TO = LOCAL_TO;
-	
-	/**
-		@public
-		@static
-	*/
-	enyo.Binding.LOCAL_BOTH = LOCAL_BOTH;
 	
 	/**
 		@public

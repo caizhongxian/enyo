@@ -17,7 +17,7 @@
 	/**
 		@private
 	*/
-	function addObserver (path, fn, ctx, noChain) {
+	function addObserver (path, fn, ctx, opts) {
 		
 		this.observers().push({
 			path: path,
@@ -25,7 +25,7 @@
 			ctx: ctx || this
 		});
 		
-		if (!noChain && path.indexOf(".") > 0) {
+		if ((!opts || !opts.noChain) && path.indexOf(".") > 0) {
 			this.chains().push(new ObserverChain(path, this));
 		}
 		

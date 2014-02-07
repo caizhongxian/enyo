@@ -305,7 +305,6 @@ describe ("Relational Models", function () {
 		
 		describe ("Bindings", function () {
 			
-			it ("should be able to bind to local properties of the model with local true");
 			it ("should be able to bind to attributes", function () {
 				var model, obj;
 				
@@ -320,13 +319,56 @@ describe ("Relational Models", function () {
 				obj.model = model;
 				
 				model.set("tooneprop.someattr", "some value");
-				obj.binding({from: ".model.tooneprop.someattr", to: ".localattr"});
+				obj.binding({from: "model.tooneprop.someattr", to: "localattr"});
 				
 				expect(model.get("tooneprop.someattr")).to.equal("some value");
 				expect(obj.localattr).to.exist.and.to.equal("some value");
 			});
-			it ("should be able to bind through a toOne relation chain");
-			it ("should be able to bind to a local property of the collection of a toMany relation");
+			
+			it ("should be able to bind through a toOne relation chain", function () {
+				
+				var ctor, obj, model;
+				
+				ctor = enyo.kind({
+					kind: Relational,
+					relations: [{
+						key: "tooneprop"
+					}]
+				});
+				
+				model = new ctor({tooneprop: 30});
+				obj = new enyo.Object({model: model});
+				
+				obj.binding({from: "model.tooneprop.id", to: "toonepropid"});
+				
+				expect(obj.toonepropid).to.exist.and.to.equal(30);
+				
+				model.destroy();
+				obj.destroy();
+			});
+			
+			it ("should be able to bind to a local property of the collection of a toMany relation", function () {
+				
+				var ctor, obj, model;
+				
+				ctor = enyo.kind({
+					kind: Relational,
+					relations: [{
+						key: "tomanyprop",
+						type: "toMany"
+					}]
+				});
+				
+				model = new ctor({tomanyprop: [{id: 0}, {id: 1}, {id: 2}]});
+				obj = new enyo.Object({model: model});
+				
+				obj.binding({from: "model.tomanyprop.length", to: "length"});
+				
+				expect(obj).to.have.length(3);
+				
+				obj.destroy();
+				model.destroy();
+			});
 			
 		});
 		

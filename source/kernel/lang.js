@@ -59,7 +59,6 @@
 			(target._FinalCtor || target._finishKindCreation);
 	};
 
-	//*@public
 	/**
 		A fast-path enabled global getter that takes a string path, which may be a
 		full path (from context window/Enyo) or a relative path (to the execution
@@ -67,8 +66,11 @@
 		backwards-compatible generated getters, as well as how to handle computed
 		properties. Returns _undefined_ if the object at the given path cannot be
 		found. May safely be called on non-existent paths.
+	
+		@public
+		@method enyo.getPath
 	*/
-	enyo.getPath = function (path) {
+	var getPath = enyo.getPath = function (path) {
 		// we're trying to catch only null/undefined not empty string or 0 cases
 		if (!path && !enyo.exists(path)) return path;
 		
@@ -103,6 +105,70 @@
 		return next && next.prototype? enyo.checkConstructor(next): next;
 	};
 	
+	var localRegex = /(\(|\))/g
+		, localMatch = /^\(.*\)$/;
+	
+	/**
+		@public
+		@method
+	*/
+	var getLocal = enyo.getLocal = function (path) {
+		// we're trying to catch only null/undefined not empty string or 0 cases
+		if (!path && !enyo.exists(path)) return path;
+	
+		// obviously there is a severe penalty for requesting get with a path lead
+		// by unnecessary relative notation...
+		if (path[0] == ".") path = path.replace(/^\.+/, "");
+	
+		// in cases where a chained path is requested we can't safely rely on
+		// getPath to handle it as it may be a mixed path
+		if (path.indexOf(".") > -1) {
+			var parts = path.split(".")
+				, part = parts.shift()
+				, next = this
+				, loc = false;
+			
+			do {
+				// one change from getPath is that we need to look for the special
+				// notation and parse it out if necessary
+				localMatch.test(part) && (loc = true) && (part = part.replace(localRegex, ""));
+			
+				// for constructors we must check to make sure they are undeferred before
+				// looking for static properties
+				if (next.prototype) next = enyo.checkConstructor(next);
+				// for the auto generated or provided published property support we have separate
+				// routines that must be called to preserve compatibility
+				if (next._getters && (getter = next._getters[part])) next = next[getter]();
+				// for all other special cases to ensure we use any overloaded getter methods
+				else if (!loc && next.get && next !== this) next = next.get(part);
+				else if (loc && next.getLocal && next !== this) next = next.getLocal(part);
+				// and for regular cases
+				else next = next[part];
+				// reset our local flag
+				loc = false;
+			} while (next && (part = parts.shift()));
+		
+			return next && next.prototype? checkConstructor(next): next;
+		}
+	
+		// we have to ensure that the single path isn't wrapped
+		path[0] == "(" && (path = path.replace(localRegex, ""));
+	
+		// the simple case
+		return getPath.call(this, path);
+	};
+	
+	/**
+		@public
+		@method
+	*/
+	var setLocal = enyo.setLocal = function (path, is, force) {
+		// @TODO: Chained path...
+		
+		
+		path[0] == "(" && (path = path.replace(localRegex, ""));
+		return setPath.call(this, path, is, force);	
+	};
 	
 	/*enyo.getPath = function (path) {
 		// in case nothing is passed or null, we return it to keep it from
@@ -181,7 +247,7 @@
 		parameter is present and is an explicit boolean true, the observers
 		will be triggered regardless. Returns the context from which the method was executed.
 	*/
-	enyo.setPath = function (path, value, force) {
+	var setPath = enyo.setPath = function (path, value, force) {
 		// in almost all cases when calling and enyo is the context global is
 		// the intended scope
 		var b = (this === enyo? enyo.global: this), c = b;

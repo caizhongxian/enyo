@@ -1,7 +1,10 @@
 (function (enyo) {
 	
 	var getPath = enyo.getPath
+		, checkConstructor = enyo.checkConstructor
 		, inherit = enyo.inherit
+		, getLocal = enyo.getLocal
+		, setLocal = enyo.setLocal
 		, setPath = enyo.setPath;
 	
 	/**
@@ -20,11 +23,11 @@
 			@public
 			@method
 		*/
-		get: function () {
+		get: function (path) {
 			var key = this.proxyObjectKey
 				, proxy = this[key];
 			
-			return proxy && getPath.apply(proxy, arguments);
+			return proxy && getPath.call(proxy, path);
 		},
 		
 		/**
@@ -48,16 +51,16 @@
 			@public
 			@method
 		*/
-		getLocal: function () {
-			return getPath.apply(this, arguments);
+		getLocal: function (path) {
+			return getLocal.call(this, path);
 		},
 		
 		/**
 			@public
 			@method
 		*/
-		setLocal: function () {
-			return setPath.apply(this, arguments);
+		setLocal: function (path, is, force) {
+			return setLocal.call(this, path, is, force);
 		}
 	};
 	
