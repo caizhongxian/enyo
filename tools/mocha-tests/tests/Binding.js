@@ -97,6 +97,42 @@ describe ("Binding", function () {
 					expect(bnd.to).to.be.a("string");
 				});
 			});
+			
+			describe ("#local", function () {
+				
+				it ("should use the getLocal and setLocal method instead of get and set for objects that inherit from " +
+					"ProxyObject when the local bit is set for the appropriate direction", function () {
+					
+					var ctor, obj1, obj2;
+					ctor = enyo.kind({kind: null, mixins: [enyo.ProxyObject, enyo.ObserverSupport, enyo.BindingSupport]});
+					ctor = enyo.kind({kind: ctor, proxyObjectKey: "content"});
+					obj1 = new ctor();
+					obj2 = new ctor();
+					
+					// ensure they don't share the object reference
+					obj1.content = {};
+					obj2.content = {};
+					
+					obj1.set("obj1proxyprop", "obj1proxyvalue");
+					obj1.setLocal("obj1localprop", "obj1localvalue");
+					obj2.setLocal("ambiguousprop", "incorrectvalue");
+					obj2.set("ambiguousprop", "correctvalue");
+					
+					obj2.binding({from: "obj1localprop", to: "obj1localprop", source: obj1, local: enyo.Binding.LOCAL_FROM});
+					obj2.binding({from: "obj1proxyprop", to: "obj1proxyprop", source: obj1});
+					obj2.binding({from: "ambiguousprop", to: "ambiguousprop", target: obj1, local: enyo.Binding.LOCAL_TO});
+					// expect that the from-local property was set to the proxy object
+					expect(obj2.content.obj1localprop).to.exist.and.to.equal("obj1localvalue");
+					// expect that the to-local property was set from the proxy object
+					expect(obj1.ambiguousprop).to.exist.and.to.equal("correctvalue");
+					expect(obj2.content.obj1proxyprop).to.exist.and.to.equal("obj1proxyvalue");
+					
+					obj1.destroy();
+					obj2.destroy();
+				});
+				
+			});
+			
 			describe.skip("#dirty", function () {
 			});
 			describe("#transform", function () {
@@ -199,7 +235,7 @@ describe ("Binding", function () {
 						from: ".testprop",
 						to: ".testprop",
 						transform: function (val, dir) {
-							return dir == enyo.Binding.DIRTY.FROM
+							return dir == enyo.Binding.DIRTY_FROM
 								? val? val + 1: val
 								: val? val - 1: val
 								;

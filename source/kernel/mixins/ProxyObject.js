@@ -40,7 +40,7 @@
 				was = this.get(path);
 				setPath.apply(proxy, arguments);
 				
-				if (force || was !== is) this.notify(path, was, is);
+				if ((force || was !== is) && this.notify) this.notify(path, was, is);
 			}
 		},
 		

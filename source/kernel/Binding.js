@@ -10,11 +10,13 @@
 		, getPath = enyo.getPath
 		, remove = enyo.remove
 		, bindings = enyo.bindings = [];
-		
-	var DIRTY = {
-		TO   : 0x01,
-		FROM : 0x02
-	};
+	
+	var DIRTY_FROM = 0x01
+		, DIRTY_TO = 0x02;
+	
+	var LOCAL_FROM = 0x01
+		, LOCAL_TO = 0x02
+		, LOCAL_BOTH = 0x04;
 	
 	/**
 		@private
@@ -134,12 +136,17 @@
 		/**
 			@public
 		*/
-		dirty: DIRTY.FROM,
+		dirty: DIRTY_FROM,
 		
 		/**
 			@public
 		*/
 		to: null,
+		
+		/**
+			@public
+		*/
+		local: null,
 		
 		/**
 			@public
@@ -219,19 +226,20 @@
 					, target = this.target
 					, from = this.from
 					, to = this.to
+					, local = this.local
 					, xform = this.getTransform()
 					, val;
-				
+					
 				switch (this.dirty) {
-				case DIRTY.FROM:
-					val = source.get(from);
-					xform && (val = xform(val, DIRTY.FROM, this));
-					!this._stop && target.set(to, val);
+				case DIRTY_FROM:
+					val = local && source.getLocal && (local & LOCAL_FROM || local & LOCAL_BOTH) ? source.getLocal(from): source.get(from);
+					xform && (val = xform(val, DIRTY_FROM, this));
+					!this._stop && (local && target.setLocal && (local & LOCAL_TO || local & LOCAL_BOTH)? target.setLocal(to, val): target.set(to, val));
 					break;
-				case DIRTY.TO:
-					val = target.get(to);
-					xform && (val = xform(val, DIRTY.TO, this));
-					!this._stop && source.set(from, val);
+				case DIRTY_TO:
+					val = local && target.getLocal && (local & LOCAL_TO || local & LOCAL_BOTH)? target.getLocal(to): target.get(to);
+					xform && (val = xform(val, DIRTY_TO, this));
+					!this._stop && (local && source.setLocal && (local & LOCAL_FROM || local & LOCAL_BOTH)? source.setLocal(from, val): source.set(from, val));
 					break;
 				}
 				this.dirty = null;
@@ -308,8 +316,8 @@
 		*/
 		onSource: function (was, is, path) {
 			// @TODO: Should it...would it benefit from using these passed in values?
-			this.dirty = this.dirty == DIRTY.TO? null: DIRTY.FROM;
-			return this.dirty == DIRTY.FROM && this.sync();
+			this.dirty = this.dirty == DIRTY_TO? null: DIRTY_FROM;
+			return this.dirty == DIRTY_FROM && this.sync();
 		},
 		
 		/**
@@ -319,8 +327,8 @@
 		onTarget: function (was, is, path) {
 			// @TODO: Same question as above, it seems useful but would it affect computed
 			// properties or stale values?
-			this.dirty = this.dirty == DIRTY.FROM? null: DIRTY.TO;
-			return this.dirty == DIRTY.TO && this.sync();
+			this.dirty = this.dirty == DIRTY_FROM? null: DIRTY_TO;
+			return this.dirty == DIRTY_TO && this.sync();
 		}
 		
 	});
@@ -340,7 +348,31 @@
 		@public
 		@static
 	*/
-	enyo.Binding.DIRTY = DIRTY;
+	enyo.Binding.DIRTY_FROM = DIRTY_FROM;
+	
+	/**
+		@public
+		@static
+	*/
+	enyo.Binding.DIRTY_TO = DIRTY_TO;
+	
+	/**
+		@public
+		@static
+	*/
+	enyo.Binding.LOCAL_FROM = LOCAL_FROM;
+	
+	/**
+		@public
+		@static
+	*/
+	enyo.Binding.LOCAL_TO = LOCAL_TO;
+	
+	/**
+		@public
+		@static
+	*/
+	enyo.Binding.LOCAL_BOTH = LOCAL_BOTH;
 	
 	/**
 		@public

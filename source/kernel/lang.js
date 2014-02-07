@@ -69,6 +69,42 @@
 		found. May safely be called on non-existent paths.
 	*/
 	enyo.getPath = function (path) {
+		// we're trying to catch only null/undefined not empty string or 0 cases
+		if (!path && !enyo.exists(path)) return path;
+		
+		var next = (this === enyo? enyo.global: this)
+			, parts, part, getter;
+		
+		// obviously there is a severe penalty for requesting get with a path lead
+		// by unnecessary relative notation...
+		if (path[0] == ".") path = path.replace(/^\.+/, "");
+		
+		// here's where we check to make sure we have a truthy string-ish
+		if (!path) return;
+		
+		parts = path.split(".");
+		part = parts.shift();
+		
+		do {
+			// for constructors we must check to make sure they are undeferred before
+			// looking for static properties
+			if (next.prototype) next = enyo.checkConstructor(next);
+			// for the auto generated or provided published property support we have separate
+			// routines that must be called to preserve compatibility
+			if (next._getters && (getter = next._getters[part])) next = next[getter]();
+			// for all other special cases to ensure we use any overloaded getter methods
+			else if (next.get && next !== this) next = next.get(part);
+			// and for regular cases
+			else next = next[part];
+		} while (next && (part = parts.shift()));
+		
+		// if necessary we ensure we've undeferred any constructor that we're
+		// retrieving here as a final property as well
+		return next && next.prototype? enyo.checkConstructor(next): next;
+	};
+	
+	
+	/*enyo.getPath = function (path) {
 		// in case nothing is passed or null, we return it to keep it from
 		// failing the other cases
 		if (path === undefined || null === path) { return path; }
@@ -117,7 +153,7 @@
 		// deferred constructor, and return it
 		v = b[pr];
 		return (("function" == typeof v && enyo.checkConstructor(v)) || v);
-	};
+	};*/
 
 	//*@protected
 	//* Simplified version of enyo.getPath used internally for get<Name> calls.

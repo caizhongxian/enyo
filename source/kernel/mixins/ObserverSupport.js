@@ -25,7 +25,7 @@
 			ctx: ctx || this
 		});
 		
-		if (path.indexOf(".") > 0 && !noChain) {
+		if (!noChain && path.indexOf(".") > 0) {
 			this.chains().push(new ObserverChain(path, this));
 		}
 		

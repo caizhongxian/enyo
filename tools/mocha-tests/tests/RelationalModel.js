@@ -84,6 +84,36 @@ describe ("Relational Models", function () {
 			
 			describe ("#set", function () {
 				
+				it ("should set a property of the attributes object to the value", function () {
+					var model = new Relational();
+					model.set("testprop1", true);
+					expect(model.get("testprop1")).to.be.true;
+					expect(model.attributes.testprop1).to.be.true;
+					model.destroy();
+				});
+				
+				it ("should set the property on a relation's model/collection", function () {
+					var model;
+					
+					model = enyo.singleton({
+						kind: Relational,
+						relations: [{
+							key: "tooneprop"
+						}, {
+							key: "tomanyprop",
+							type: "toMany"
+						}]
+					});
+					
+					model.set("tooneprop.testprop", true);
+					model.set("tomanyprop.testprop", true);
+					
+					expect(model.get("tooneprop").attributes.testprop).to.be.true;
+					expect(model.get("tomanyprop").testprop).to.be.true;
+					
+					model.destroy();
+				});
+				
 			});
 			
 			describe ("#setLocal", function () {
@@ -276,7 +306,25 @@ describe ("Relational Models", function () {
 		describe ("Bindings", function () {
 			
 			it ("should be able to bind to local properties of the model with local true");
-			it ("should be able to bind to attributes");
+			it ("should be able to bind to attributes", function () {
+				var model, obj;
+				
+				model = enyo.singleton({
+					kind: Relational,
+					relations: [{
+						key: "tooneprop"
+					}]
+				});
+				
+				obj = new enyo.Object();
+				obj.model = model;
+				
+				model.set("tooneprop.someattr", "some value");
+				obj.binding({from: ".model.tooneprop.someattr", to: ".localattr"});
+				
+				expect(model.get("tooneprop.someattr")).to.equal("some value");
+				expect(obj.localattr).to.exist.and.to.equal("some value");
+			});
 			it ("should be able to bind through a toOne relation chain");
 			it ("should be able to bind to a local property of the collection of a toMany relation");
 			
