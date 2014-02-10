@@ -172,7 +172,7 @@
 		computed: function (match) {
 			var computed = this.kindComputed || (this.kindComputed = nar);
 			
-			return !name? computed: filter(computed, function (ln) {
+			return !match? computed: filter(computed, function (ln) {
 				return ln.method === match || ln.name == match;
 			});
 		}

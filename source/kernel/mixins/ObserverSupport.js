@@ -5,6 +5,8 @@
 		, isArray = enyo.isArray
 		, isFunction = enyo.isFunction
 		, forEach = enyo.forEach
+		, map = enyo.map
+		, clone = enyo.clone
 		, keys = enyo.keys
 		, findIndex = enyo.findIndex
 		, filter = enyo.filter
@@ -154,7 +156,11 @@
 				, loc;
 				
 			loc = observerTable[euid] || (observerTable[euid] = (
-				this.kindObservers? this.kindObservers.slice(): []
+				this.kindObservers? map(this.kindObservers, function (ln) {
+					ln = clone(ln);
+					ln.ctx = this;
+					return ln;
+				}, this): []
 			));
 	
 			return !path? loc: filter(loc, function (ln) {
