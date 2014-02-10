@@ -253,7 +253,7 @@
 			@method
 		*/
 		contains: function (model) {
-			return this.has(model);
+			return this.models.has(model);
 		},
 		
 		/**
@@ -278,6 +278,14 @@
 		*/
 		find: function (fn, ctx) {
 			return this.models.find(fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		findIndex: function (fn, ctx) {
+			return this.models.findIndex(fn, ctx || this);
 		},
 		
 		/**

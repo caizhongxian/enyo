@@ -3,6 +3,7 @@
 	var kind = enyo.kind
 		, forEach = enyo.forEach
 		, find = enyo.find
+		, findIndex = enyo.findIndex
 		, map = enyo.map
 		, filter = enyo.filter
 		, isArray = enyo.isArray
@@ -162,6 +163,14 @@
 		*/
 		find: function (fn, ctx) {
 			return find(this.slice(), fn, ctx || this);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		findIndex: function (fn, ctx) {
+			return findIndex(this.slice(), fn, ctx || this);
 		},
 		
 		/**

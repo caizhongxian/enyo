@@ -144,7 +144,7 @@
 					
 					// if we have a changed object now we know with absolution that
 					// we should emit the event
-					if (this.changed && !this.isSilenced()) this.emit("change", this.changed);
+					if (this.changed && !this.isSilenced()) this.emit("change", this.changed, this);
 				} else {
 					var previous = this.previous
 						, changed = this.changed
@@ -157,7 +157,7 @@
 						changed || (this.changed = changed = {});
 						previous[path] = was;
 						changed[path] = is;
-						!this.isSilenced() && this.emit("change", changed);
+						!this.isSilenced() && this.emit("change", changed, this);
 					}
 				}
 				return this;
