@@ -96,9 +96,18 @@
 		*/
 		onChange: function (was, is, path) {
 			// unregister previous model if any
-			was && was.off("*", this.onModelEvent, this);
+			if (was) was.off("*", this.onModelEvent, this);
 			// register for events on new model if any
-			is && is.on("*", this.onModelEvent, this);
+			if (is) is.on("*", this.onModelEvent, this);
+			
+			// either way we need to update any observers that might be related
+			// to the model
+			var props = this.modelObservedProperties();
+			for (var key in props) {
+				if ((!was && is) || (was && !is) || (was && is && was.attributes[key] !== is.attributes[key])) {
+					this.notify(key, was && was.get(key), is && is.get(key));
+				}
+			}
 		},
 		
 		/**
@@ -106,12 +115,67 @@
 			@method
 		*/
 		onModelEvent: function (model, e, props) {
+			// re-emit the event as expected with the only change being the originator (first param)
+			// will be this controller but all listeners should expect to use the third parameter as
+			// is the convention for model listeners
+			this.emit(e, props, model);
+			
 			switch (e) {
 			case "change":
-				this.emit(e, props, model);
 				if (props) for (var key in props) this.notify(key, model.previous[key], props[key]);
 				break;
+			case "destroy":
+				this.setLocal("model", null);
+				break;
 			}
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		modelObservedProperties: function () {
+			return this._observedProps || (this._observedProps = {});
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		observe: inherit(function (sup) {
+			return function (path) {
+				if (path.indexOf(".") == -1 && !this.hasOwnProperty(path) && !this.isComputed(path)) this.modelObservedProperties()[path] = null;
+				return sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@private
+			@method
+		*/
+		unobserve: inherit(function (sup) {
+			return function (path) {
+				var ret = sup.apply(this, arguments)
+					, props = this.modelObservedProperties();
+				if (props[path] === null && !this.observers(path).length) delete props[path];
+				return ret; 
+			};
+		}),
+		
+		/**
+			@private
+			@method
+		*/
+		addObserver: function () {
+			return this.observe.apply(this, arguments);
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		removeObserver: function () {
+			return this.unobserve.apply(this, arguments);
 		},
 		
 		/**

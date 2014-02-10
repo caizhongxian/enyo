@@ -160,15 +160,66 @@ describe ("ModelController", function () {
 		});
 		
 		it ("should emit a destroy event when its model emits a destroy event", function () {
-			
+			controller = new ModelController();
+			model = new enyo.Model();
+			controller.set("model", model);
+			var spy = sinon.spy();
+			controller.on("destroy", spy);
+			model.destroy();
+			expect(spy).to.have.been.called;
+			expect(controller.model).to.not.be.ok;
 		});
 		
 	});
 	
 	describe ("Notifications", function () {
+		var model, controller;
 		
-		it ("should notify for each property changed on a model and trigger binding updated");
-		it ("should allow bindings to chain through to child attributes and update properly when the model instance changes");
+		afterEach (function () {
+			model && model.destroy();
+			controller && controller.destroy();
+		});
+		
+		it ("should notify for each property changed on a model and trigger binding updated", function () {
+			controller = new ModelController();
+			model = new enyo.Model();
+			controller.set("model", model);
+			
+			var spy1 = sinon.spy()
+				, spy2 = sinon.spy()
+				, obj = new enyo.Object();
+				
+			obj.binding({from: "someProp1", source: controller, to: "someProp"});
+			controller.observe("someProp1", spy1);
+			controller.observe("someProp2", spy2);
+			model.set({someProp1: "someValue1", someProp2: "someValue2"});
+			expect(spy1).to.have.been.called;
+			expect(spy2).to.have.been.called;
+			expect(obj.someProp).to.exist.and.to.equal("someValue1");
+		});
+		
+		it ("should allow bindings to chain through to child attributes and update properly when the model instance changes", function () {
+			var ctor, mod1, mod2, obj;
+			
+			ctor = enyo.kind({
+				kind: enyo.RelationalModel,
+				relations: [{
+					key: "tooneprop"
+				}]
+			});
+			
+			mod1 = new ctor({tooneprop: {name: "model1"}});
+			mod2 = new ctor({tooneprop: {name: "model2"}});
+			obj = new enyo.Object();
+			controller = new ModelController();
+			
+			obj.binding({from: "tooneprop.name", source: controller, to: "selectedName"});
+			expect(obj.selectedName).to.be.undefined;
+			controller.set("model", mod1);
+			expect(obj.selectedName).to.equal("model1");
+			controller.set("model", mod2);
+			expect(obj.selectedName).to.equal("model2");
+		});
 		
 	});
 	
