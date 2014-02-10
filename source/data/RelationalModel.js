@@ -4,6 +4,7 @@
 		, isObject = enyo.isObject
 		, isString = enyo.isString
 		, isFunction = enyo.isFunction
+		, isArray = enyo.isArray
 		, forEach = enyo.forEach
 		, where = enyo.where
 		, mixin = enyo.mixin
@@ -403,7 +404,7 @@
 				if (create) {
 					model = new model(null, null, modelOpts);
 					exists(related) && parse && (related = model.parse(related));
-					related && (isObject(related)? model.set(related): model.set(model.primaryKey, related));
+					related && isObject(related)? model.set(related): model.set(model.primaryKey, related);
 					this.related = model;
 					model = this.model;
 				} else {
@@ -418,7 +419,7 @@
 			// we need to know about all future changes
 			inst.on("change", this.onChange, this);
 			// attempt to find and or setup any related value that we can at this time
-			this.findRelated();
+			// this.findRelated();
 		},
 		
 		/**
@@ -493,7 +494,7 @@
 				// we try and establish the relation when possible
 				if (inverseKey) {
 					rel = found.getRelation(inverseKey);
-					
+				
 					if (!rel) found.relations.push((rel = new inverseType(found, {
 						isOwner: !isOwner,
 						key: inverseKey,
@@ -503,7 +504,7 @@
 						model: inst.ctor,
 						related: inst
 					})));
-					
+				
 					switch (rel.kindName) {
 					case "enyo.toOne":
 						if (rel.related !== inst) rel.setRelated(inst);
@@ -516,6 +517,8 @@
 						break;
 					}
 				}
+				
+				if (isOwner) found.on("change", this.onChange, this);
 			}
 			
 			return found;
@@ -530,7 +533,7 @@
 				, inst = this.instance
 				, id = inst.get(inst.primaryKey)
 				, inverseKey = this.inverseKey;
-			return model.euid == related || model.get(model.primaryKey) == related || (exists(id) && model.get(inverseKey) == id);
+			return (related && (model.euid == related || model.get(model.primaryKey) == related || model.get(model.primaryKey) == related[inst.primaryKey])) || (exists(id) && model.get(inverseKey) == id);
 		},
 		
 		/**
@@ -552,7 +555,9 @@
 			@method
 		*/
 		onChange: function (sender, e, props) {
-			var key = this.key;
+			var key = this.key
+				, inst = this.instance
+				, changed;
 			
 			// console.log("enyo.toOne.onChange", arguments);
 			
@@ -561,6 +566,16 @@
 					if (key in props) {
 						this.findRelated();
 					}
+				}
+			} else if (sender === this.related) {
+				if (e == "change") {
+					// @TODO: This is a questionable way to handle this particular type of event chaining
+					// it is possible it would be better to re-create the string/paths to be relative to
+					// the instance not another nested object this way
+					inst.isDirty = true;
+					changed = inst.changed || (inst.changed = {});
+					changed[key] = props;
+					if (!inst.isSilenced()) inst.emit("change", changed, inst);
 				}
 			}
 		}
@@ -719,9 +734,10 @@
 			var rels = this.relations || (this.relations = []);
 			
 			if (rels.length) {
-				this.relations = map(rels, function (rel) {
-					return new rel.type(this, rel);
+				this.relations = map(rels, function (ln) {
+					return new ln.type(this, ln);
 				}, this);
+				forEach(this.relations, function (ln) { ln.findRelated(); });
 			}
 		}
 

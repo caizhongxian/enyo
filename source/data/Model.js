@@ -67,6 +67,11 @@
 		/**
 			@public
 		*/
+		isDirty: false,
+		
+		/**
+			@public
+		*/
 		primaryKey: "id",
 		
 		/**
@@ -157,6 +162,10 @@
 						changed || (this.changed = changed = {});
 						previous[path] = was;
 						changed[path] = is;
+						
+						// ensure we update our dirty flag
+						this.isDirty = true;
+						
 						!this.isSilenced() && this.emit("change", changed, this);
 					}
 				}
