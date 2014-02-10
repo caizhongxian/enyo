@@ -47,7 +47,7 @@
 		/**
 			@public
 		*/
-		attributes: {},
+		attributes: null,
 		
 		/**
 			@public
@@ -177,23 +177,21 @@
 			// ensure we have a unique identifier that could potentially
 			// be used in remote systems
 			this.euid = this.euid || uid("m");
-
+			
 			// if necessary we need to parse the incoming attributes
 			attrs = attrs? opts.parse? this.parse(attrs): attrs: null;
 			
 			// ensure we have the updated attributes
 			this.attributes = this.attributes? clone(this.attributes): {};
 			attrs && mixin(this.attributes, attrs);
-
+			
 			// now we need to ensure we have a store and register with it
 			this.store = this.store || enyo.store;
-
+			
 			// @TODO: The idea here is that when batch instancing records a collection
 			// should be intelligent enough to avoid doing each individually or in some
 			// cases it may be useful to have a record that is never added to a store?
-			if (!opts || !opts.noAdd) {
-				this.store.add(this, opts);
-			}
+			if (!opts || !opts.noAdd) this.store.add(this, opts);
 		}
 	});
 	

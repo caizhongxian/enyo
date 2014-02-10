@@ -19,6 +19,7 @@
 		/** @lends enyo.ModelList.prototype */ {
 		name: "enyo.ModelList",
 		kind: null,
+		noDefer: true,
 		
 		/**
 			@public
@@ -45,6 +46,8 @@
 			
 			// id && !loc[id] && (loc[id] = model);
 			
+			// @TODO: Absolutely must come back to this as this does not seem to be the
+			// best solution to this issue...
 			if (id && loc[id]) {
 				model.headless = true;
 			} else loc[id] = model;

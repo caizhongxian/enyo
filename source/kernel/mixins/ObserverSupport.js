@@ -6,7 +6,7 @@
 		, isFunction = enyo.isFunction
 		, forEach = enyo.forEach
 		, keys = enyo.keys
-		, find = enyo.find
+		, findIndex = enyo.findIndex
 		, filter = enyo.filter
 		, uid = enyo.uid
 		, inherit = enyo.inherit
@@ -40,7 +40,7 @@
 			, idx;
 		
 		if (observers.length) {
-			idx = find(observers, function (ln) {
+			idx = findIndex(observers, function (ln) {
 				return ln.path == path && ln.method === fn;
 			});
 			idx >= 0 && observers.splice(idx, 1);

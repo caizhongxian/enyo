@@ -175,66 +175,6 @@
 		// we will always return the original root-object of the call
 		return base;
 	};
-	
-	
-	// var setPath = enyo.setPath = function (path, value, force) {
-	// 	// in almost all cases when calling and enyo is the context global is
-	// 	// the intended scope
-	// 	var b = (this === enyo? enyo.global: this), c = b;
-	// 	// if the path is nothing, undefined or null, or an empty string even
-	// 	// we can't do anything so we return this
-	// 	if (!path) { return b; }
-	// 	// strip leading `.` without adding to the stack when possible
-	// 	var p = (path[0] == "."? path.replace(/^\.+/, ""): path);
-	// 	// if the string is empty then we won't process anything else either
-	// 	if (!p) { return b; }
-	// 	// simply split it on "." and try and run down the path without recursively
-	// 	// executing the getter
-	// 	var ps = p.split("."),
-	// 		// the final property
-	// 		pr = ps.pop(),
-	// 		// placeholder during iterations over the path,
-	// 		// the previous value and a helper variable in case we find a computed property
-	// 		tp, rv, fn;
-	// 	for (var i=0, r$; (r$=ps[i]); ++i) {
-	// 		// unfortunately it is possible to request the actual "enyo" object in
-	// 		// a path so we have to test for this case or bad things happen
-	// 		if (r$ == "enyo" && enyo === b) { continue; }
-	// 		// its actually pretty simple, check to see if the next requested context exists and is an object
-	// 		// or a function, if so, we use that and continue, otherwise we have to create it
-	// 		if ((tp = b[r$])) {
-	// 			if (typeof tp === "object") {
-	// 				b = tp;
-	// 			}
-	// 			else if (typeof tp == "function") {
-	// 				// in the rare case that our path includes a computed property (as part of
-	// 				// chain -- this really is rare but not impossible) we use the getter to retrieve
-	// 				// it correctly
-	// 				if (b._isObject && b.computed && b.computed[r$] != null) {
-	// 					b = b.get(r$);
-	// 				} else if (isDeferredConstructor(tp)) {
-	// 					// ensure this isn't a constructor that needs to be undeferred
-	// 					b = enyo.checkConstructor(tp);
-	// 				} else {
-	// 					b = tp;
-	// 				}
-	// 			}
-	// 		}
-	// 		else {
-	// 			// if it wasn't present we instantiate the path and use that object
-	// 			b = b[r$] = {};
-	// 		}
-	// 	}
-	// 	// now we can attempt to retrieve a previous value if it can be done in as
-	// 	// efficient a manner as possible -- we will call an overloaded getter if necessary
-	// 	rv = (b && b._isObject && b._getters && (fn=b._getters[pr])) ? b[fn]() : b[pr];
-	// 	// now we set the new value, much simpler
-	// 	b[pr] = value;
-	// 	// only notify if the value has changed or if the update should be forced
-	// 	if (b.notifyObservers && rv !== value || force) { b.notifyObservers(pr, rv, value); }
-	// 	// return the original base reference we made in the first line
-	// 	return c;
-	// };
 
 	//*@protected
 	//* Simplified version of enyo.setPath used on set<Name> calls
@@ -341,32 +281,30 @@
 		return !(it === "false" || it === false || it === 0 || it === null || it === undefined);
 	};
 
-	//*@public
 	/**
-		Returns the index of any entry in _array_ whose _callback_ returns
-		a truthy value. Accepts an optional _context_ for the _callback_. Each
-		_callback_ will receive three parameters, the _value_ at _index_, and an
-		immutable copy of the original array. If no callback returns true, or
-		_array_ is not an Array, this method returns false.
+		ECMA6 (ECMA-262) draft implementation of Array.prototype.findIndex.
+	
+		@public
+		@method enyo.findIndex
 	*/
-	enyo.find = function (array, callback, context) {
-		var $source = enyo.isArray(array) && array;
-		var $ctx = context || enyo.global;
-		var $fn = callback;
-		var idx = 0, len, $copy, ret;
-		if ($source && $fn && enyo.isFunction($fn)) {
-			$copy = enyo.clone($source);
-			len = $source.length;
-			for (; idx < len; ++idx) {
-				ret = $fn.call($ctx, $source[idx], idx, $copy);
-				if (!! ret) {
-					return idx;
-				}
-			}
+	enyo.findIndex = function (array, fn, ctx) {
+		for (var i=0, len=array.length; i<len; ++i) {
+			if (fn.call(ctx, array[i], i, array)) return i;
 		}
-		return false;
+		return -1;
 	};
-	var find = enyo.find;
+	
+	/**
+		ECMA 6 (ECMA-262) draft implementation of Array.prototype.find.
+	
+		@public
+		@method enyo.find
+	*/
+	var find = enyo.find = function (array, fn, ctx) {
+		for (var i=0, len=array.length; i<len; ++i) {
+			if (fn.call(ctx, array[i], i, array)) return array[i];
+		}
+	};
 
 	//* Returns the index of the element in _inArray_ that is equivalent
 	//* (==) to _inElement_, or -1 if no such element is found.
@@ -716,26 +654,42 @@
 	};
 
 	/**
-		Creates a new array with all elements of _inArray_ that pass the test
-		defined by _inFunc_. If _inContext_ is specified, _inFunc_ is called
-		with _inContext_ as _this_.
+		@public
+		@method enyo.filter
 	*/
-	enyo.filter = function(inArray, inFunc, inContext) {
-		var c = inContext || this;
-		if (enyo.isArray(inArray) && inArray.filter) {
-			return inArray.filter(inFunc, c);
-		} else {
-			var results = [];
-			var f = function(e, i, a) {
-				var eo = e;
-				if (inFunc.call(c, e, i, a)) {
-					results.push(eo);
-				}
-			};
-			enyo.forEach(inArray, f, c);
-			return results;
+	var filter = enyo.filter = function (array, fn, ctx) {
+		if (array.filter) return array.filter(fn, ctx);
+		
+		var res = []
+			, val;
+		for (var i=0, len=array.length; i<len; ++i) {
+			if (fn.call(ctx, (val = array[i]), i, array)) res.push(val);
 		}
+		
+		return res;
 	};
+
+	// /**
+	// 	Creates a new array with all elements of _inArray_ that pass the test
+	// 	defined by _inFunc_. If _inContext_ is specified, _inFunc_ is called
+	// 	with _inContext_ as _this_.
+	// */
+	// enyo.filter = function(inArray, inFunc, inContext) {
+	// 	var c = inContext || this;
+	// 	if (enyo.isArray(inArray) && inArray.filter) {
+	// 		return inArray.filter(inFunc, c);
+	// 	} else {
+	// 		var results = [];
+	// 		var f = function(e, i, a) {
+	// 			var eo = e;
+	// 			if (inFunc.call(c, e, i, a)) {
+	// 				results.push(eo);
+	// 			}
+	// 		};
+	// 		enyo.forEach(inArray, f, c);
+	// 		return results;
+	// 	}
+	// };
 
 	/**
 		Returns an array of all own enumerable properties found on _inObject_.
@@ -880,10 +834,9 @@
 		@public
 		@method
 	*/
-	enyo.where = function (ary, fn, ctx) {
-		var idx = find(ary, fn, ctx);
-		return idx >= 0? ary[idx]: null;
-	};
+	enyo.where = find;
+
+
 
 	//* @public
 	/**

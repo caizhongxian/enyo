@@ -2,7 +2,7 @@
 	
 	var forEach = enyo.forEach
 		, toArray = enyo.toArray
-		, find = enyo.find
+		, findIndex = enyo.findIndex
 		, filter = enyo.filter
 		, uid = enyo.uid
 		, eventTable = {};
@@ -29,7 +29,7 @@
 			, idx;
 			
 		if (listeners.length) {
-			idx = find(listeners, function (ln) {
+			idx = findIndex(listeners, function (ln) {
 				return ln.event == e && ln.method === fn && ctx? ln.ctx === ctx: true;
 			});
 			idx >= 0 && listeners.splice(idx, 1);

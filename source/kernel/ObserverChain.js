@@ -112,6 +112,7 @@
 		name: "enyo.ObserverChain",
 		kind: LinkedList,
 		nodeKind: ObserverChainNode,
+		noDefer: true,
 		
 		/**
 			@private
