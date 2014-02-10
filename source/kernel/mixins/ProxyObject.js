@@ -9,6 +9,13 @@
 		, isObject = enyo.isObject;
 	
 	/**
+		This mixin is designed to abstract interaction of the _get()_/_set()_ methods. It allows
+		a specific property to be named as the _proxy object_ {@link #proxyObjectKey}. The _proxy object_
+		is the target object on which calls to _get()_/_set()_ will be made. It also adds convenience
+		methods _getLocal()_/_setLocal()_ that will operate on the base object instance. There are usually
+		limitations involved with using this mixin such as limited {@link Binding} or specific {@link Observer}
+		support.
+	
 		@public
 		@mixin enyo.ProxyObject
 	*/
@@ -28,7 +35,7 @@
 			var key = this.proxyObjectKey
 				, proxy = this[key];
 			
-			return proxy && getPath.call(proxy, path);
+			return proxy? proxy.get? proxy.get.apply(proxy, arguments): getPath.call(proxy, path): undefined;
 		},
 		
 		/**
@@ -44,10 +51,12 @@
 			
 			if (proxy) {
 				was = this.get(path);
-				setPath.apply(proxy, arguments);
+				proxy.set? proxy.set.apply(proxy, arguments): setPath.apply(proxy, arguments);
 				
 				if (this.notify && (force || was !== is || (opts && opts.compare && opts.compare(was, is)))) this.notify(path, was, is);
 			}
+			
+			return this;
 		},
 		
 		/**
