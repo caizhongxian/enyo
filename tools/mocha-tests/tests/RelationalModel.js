@@ -460,13 +460,22 @@ describe ("RelationalModel", function () {
 		
 		describe ("#parse", function () {
 			
-			it ("should parse incoming data for a relation when it exists and create is true");
-			
-		});
-		
-		describe ("#model", function () {
-			
-			it ("should be a string or constructor for the expected model or collection kind");
+			it ("should parse incoming data for a relation when it exists and create is true", function () {
+				var ctor, model, spy = sinon.spy(), base;
+				base = enyo.kind({kind: Relational, parse: spy});
+				ctor = enyo.kind({
+					kind: Relational,
+					relations: [{
+						key: "somekey",
+						model: base,
+						parse: true
+					}]
+				});
+				
+				model = new ctor({somekey: {id: "02318214893423423"}});
+				expect(spy).to.have.been.calledOnce;
+				model.destroy();
+			});
 			
 		});
 		
