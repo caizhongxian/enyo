@@ -82,7 +82,7 @@
 						oneWay: false,
 						kind: enyo.BooleanBinding
 					});
-					this._selectionBindingId = bnd.id;
+					this._selectionBindingId = bnd.euid;
 				}
 			};
 		}),

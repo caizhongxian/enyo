@@ -343,6 +343,30 @@
 		
 		sup.call(this, ctor, props);
 		
+		// this scan is required to figure out what auto-observers might be present
+		for (var key in props) {
+			if (key.slice(-7) == "Changed") {
+				// ok we found one but in backward-compatibility mode we have to figure out
+				// if there are any observers and if so ensure we add them the correct way
+				// the easiest case being non-existant as we know exactly what to do
+				if (!props.observers || isArray(props.observers)) {
+					props.observers = props.observers || [];
+					// it should never have been manually added so we don't make the expensive
+					// move and look it up
+					props.observers.push({
+						path: key.slice(0, -7),
+						method: props[key]
+					});
+				} else {
+					// we don't do the conversion now for objects as that is about to be done
+					// so we have to, sadly, add them in the old way to be properly converted
+					// in the next pass
+					props.observers[key] || (props.observers[key] = []);
+					props.observers[key].push(key.slice(0, -7));
+				}
+			}
+		}
+		
 		// only matters if there are observers to manage in the properties
 		if (props.observers && !isFunction(props.observers)) {
 			var proto = ctor.prototype || ctor

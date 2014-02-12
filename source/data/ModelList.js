@@ -10,7 +10,8 @@
 		, isString = enyo.isString
 		, indexOf = enyo.indexOf
 		, clone = enyo.clone
-		, where = enyo.where;
+		, where = enyo.where
+		, exists = enyo.exists;
 		
 	/**
 		@public
@@ -49,9 +50,10 @@
 			
 			// @TODO: Absolutely must come back to this as this does not seem to be the
 			// best solution to this issue...
-			if (id && loc[id]) {
-				model.headless = true;
-			} else loc[id] = model;
+			if (exists(id)) {
+				if (loc[id]) model.headless = true;
+				else loc[id] = model;
+			}
 			
 			loc[euid] = model;
 			if (!model.headless) {

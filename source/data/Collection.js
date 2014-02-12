@@ -124,7 +124,7 @@
 						keep[found.euid] = null;
 						keep.length++;
 					}
-				} else if (find && (found = this.store.has(ctor, id))) {
+				} else if (attrs && find && (found = this.store.has(ctor, id))) {
 					// in this case we were asked to search our store for an existing record
 					// and we found one but we didn't previously have it so we are technically
 					// adding it
@@ -135,6 +135,10 @@
 					added.push(found);
 					this.prepareModel(found);
 					found.set(attrs, opts);
+				} else if (!attrs) {
+					added || (added = []);
+					added.push(model);
+					this.prepareModel(model);
 				} else if (create) {
 					model = this.prepareModel(attrs || model);
 					added || (added = []);
@@ -253,7 +257,7 @@
 			@method
 		*/
 		contains: function (model) {
-			return this.models.has(model);
+			return this.has(model);
 		},
 		
 		/**
@@ -278,14 +282,6 @@
 		*/
 		find: function (fn, ctx) {
 			return this.models.find(fn, ctx || this);
-		},
-		
-		/**
-			@public
-			@method
-		*/
-		findIndex: function (fn, ctx) {
-			return this.models.findIndex(fn, ctx || this);
 		},
 		
 		/**
