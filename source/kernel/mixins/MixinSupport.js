@@ -19,13 +19,12 @@
 			
 		if (idx < 0) {
 			name == props && (props = getPath(name));
-			
 			// if we could not resolve the requested mixin (should never happen)
 			// we throw a simple little error
 			// @TODO: Normalize error format
 			!props && enyo.error("Could not find the mixin " + name);
 			
-			applied.push(name);
+			name && applied.push(name);
 			
 			// we need to temporarily move the constructor if it has one so it
 			// will override the correct method - this is a one-time permanent
@@ -68,10 +67,7 @@
 		@private
 	*/
 	extend = enyo.kind.statics.extend = function (args, target) {
-		if (isArray(args)) {
-			return forEach(args, function (ln) { extend.call(this, ln, target); }, this);
-		}
-		
+		if (isArray(args)) return forEach(args, function (ln) { extend.call(this, ln, target); }, this);
 		if (args.mixins) feature(target || this, args);
 		else if (isString(args)) apply(target || this.prototype, args);
 		else if (args.name) apply(target || this.prototype, args);

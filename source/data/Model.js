@@ -17,16 +17,18 @@
 		
 	var ProxyObject = enyo.ProxyObject
 		, ObserverSupport = enyo.ObserverSupport
+		, ComputedSupport = enyo.ComputedSupport
 		, BindingSupport = enyo.BindingSupport
 		, EventEmitter = enyo.EventEmitter
-		, ModelList = enyo.ModelList;
+		, ModelList = enyo.ModelList
+		, oObject = enyo.Object;
 	
 	/**
 		@private
 	*/
 	var BaseModel = kind({
 		kind: null,
-		mixins: [ProxyObject]
+		mixins: [ObserverSupport, ComputedSupport, BindingSupport, EventEmitter, ProxyObject]
 	});
 	
 	/**
@@ -38,12 +40,7 @@
 		name: "enyo.Model",
 		kind: BaseModel,
 		noDefer: true,
-		
-		/**
-			@private
-		*/
-		mixins: [ObserverSupport, BindingSupport, EventEmitter],
-		
+				
 		/**
 			@public
 		*/
@@ -137,6 +134,16 @@
 			@public
 			@method
 		*/
+		get: inherit(function (sup) {
+			return function (path) {
+				return this.isComputed(path)? this.getLocal(path): sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@public
+			@method
+		*/
 		set: inherit(function (sup) {
 			return function (path, is, force) {
 				if (isObject(path)) {
@@ -150,6 +157,8 @@
 					// if we have a changed object now we know with absolution that
 					// we should emit the event
 					if (this.changed && !this.isSilenced()) this.emit("change", this.changed, this);
+				} else if (this.isComputed(path)) {
+					return this;
 				} else {
 					var previous = this.previous
 						, changed = this.changed
@@ -172,6 +181,18 @@
 				return this;
 			};
 		}),
+		
+		/**
+			@private
+			@method
+		*/
+		getLocal: ComputedSupport.get.fn(oObject.prototype.get),
+		
+		/**
+			@private
+			@method
+		*/
+		setLocal: ComputedSupport.set.fn(oObject.prototype.set),
 		
 		/**
 			@private

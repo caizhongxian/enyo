@@ -12,6 +12,8 @@
 		, filter = enyo.filter
 		, uid = enyo.uid
 		, inherit = enyo.inherit
+		, isInherited = enyo.isInherited
+		, nop = enyo.nop
 		, observerTable = {};
 		
 	var ObserverChain = enyo.ObserverChain;
@@ -70,7 +72,7 @@
 			var observers = this.observers(path);
 			
 			if (observers.length) {
-				forEach(observers, function (ln) {					
+				forEach(observers, function (ln) {
 					ln.method.call(ln.ctx || (ln.ctx = this), was, is, path);
 				}, this);
 			}
@@ -343,6 +345,8 @@
 		
 		sup.call(this, ctor, props);
 		
+		var proto = ctor.prototype || ctor;
+		
 		// this scan is required to figure out what auto-observers might be present
 		for (var key in props) {
 			if (key.slice(-7) == "Changed") {
@@ -355,7 +359,7 @@
 					// move and look it up
 					props.observers.push({
 						path: key.slice(0, -7),
-						method: props[key]
+						method: isInherited(props[key])? props[key].fn(proto[key] || nop): props[key]
 					});
 				} else {
 					// we don't do the conversion now for objects as that is about to be done
@@ -369,8 +373,7 @@
 		
 		// only matters if there are observers to manage in the properties
 		if (props.observers && !isFunction(props.observers)) {
-			var proto = ctor.prototype || ctor
-				, observers = proto.kindObservers? proto.kindObservers.slice(): null
+			var observers = proto.kindObservers? proto.kindObservers.slice(): null
 				, chains = proto._observerChains? proto._observerChains.slice(): null
 				, old;
 			
@@ -385,12 +388,12 @@
 							chains || (chains = []);
 							chains.push({
 								path: dep,
-								method: props[fn] || proto[fn]
+								method: isInherited(props[fn])? props[fn].fn(proto[fn] || nop): (props[fn] || proto[fn])
 							});
 						} else {
 							props.observers.push({
 								path: dep,
-								method: props[fn] || proto[fn]
+								method: isInherited(props[fn])? props[fn].fn(proto[fn] || nop): (props[fn] || proto[fn])
 							});
 						}
 					});
@@ -400,7 +403,8 @@
 				
 				props.observers = filter(props.observers, function (ln) {
 					if (isString(ln.method)) {
-						ln.method = props[ln.method] || proto[ln.method];
+						var fn = props[ln.method] || proto[ln.methiod];
+						ln.method = isInherited(fn)? fn.fn(proto[ln.method] || nop): fn;
 					}
 					if (isArray(ln.path)) {
 						xtra || (xtra = []);

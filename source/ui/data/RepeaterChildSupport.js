@@ -77,10 +77,10 @@
 				// to track the selected state from the view and model and keep them in sync
 				if (s) {
 					var bnd = this.binding({
-						from: ".model." + s,
-						to: ".selected",
-						oneWay: false,
-						kind: enyo.BooleanBinding
+						from: "model." + s,
+						to: "selected",
+						oneWay: false/*,
+						kind: enyo.BooleanBinding*/
 					});
 					this._selectionBindingId = bnd.euid;
 				}

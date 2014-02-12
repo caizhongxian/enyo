@@ -78,17 +78,13 @@
 			@private
 			@method
 		*/
-		getLocal: function () {
-			return this._computedGet.apply(this, arguments);
-		},
+		getLocal: ComputedSupport.get.fn(oObject.prototype.get),
 		
 		/**
 			@private
 			@method
 		*/
-		setLocal: function () {
-			return this._computedSet.apply(this, arguments);
-		},
+		setLocal: ComputedSupport.set.fn(oObject.prototype.set),
 		
 		/**
 			@private
@@ -185,10 +181,6 @@
 		constructor: function (props) {
 			// ensure we have our own model property
 			this.model = null;
-			// ensure we have access to the inheritable ComputedSupport get/set
-			// as they are completely replaced by the ProxyObject mixin
-			this._computedGet = ComputedSupport.get.fn(oObject.prototype.get);
-			this._computedSet = ComputedSupport.set.fn(oObject.prototype.set);
 			
 			// adhere to normal approach to constructor properties hash
 			props && mixin(this, props);
