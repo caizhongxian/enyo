@@ -358,6 +358,7 @@ describe ("Observer", function () {
 			var ctor, obj;
 			
 			ctor = enyo.kind({
+				kind: "enyo.Object",
 				testObserver1: function (was, is, prop) {
 					throw new Error("testObserver1" + prop);
 				},
@@ -418,6 +419,7 @@ describe ("Observer", function () {
 			var ctor, obj;
 			
 			ctor = enyo.kind({
+				kind: "enyo.Object",
 				testObserver1: function (was, is, prop) {
 					throw new Error("testObserver1" + prop);
 				},
