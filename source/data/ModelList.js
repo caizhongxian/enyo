@@ -187,6 +187,15 @@
 			@public
 			@method
 		*/
+		sort: function (fn) {
+			this._models.sort(fn);
+			return this.slice();
+		},
+		
+		/**
+			@public
+			@method
+		*/
 		clone: function () {
 			var cpy = new this.ctor();
 			cpy.idTable = clone(this.idTable);

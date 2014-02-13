@@ -309,6 +309,22 @@
 		},
 		
 		/**
+			@public
+			@method
+		*/
+		sort: function (fn) {
+			this.models.sort(fn || this.comparator);
+			this.emit("sort", fn || this.comparator);
+			return this;
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		comparator: function () {},
+		
+		/**
 			@private
 			@method
 		*/
