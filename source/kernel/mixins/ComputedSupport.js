@@ -1,9 +1,9 @@
 (function (enyo) {
 	
 	var isString = enyo.isString
-		, isObject = enyo.isObject
+		// , isObject = enyo.isObject
 		, isArray = enyo.isArray
-		, isFunction = enyo.isFunction
+		// , isFunction = enyo.isFunction
 		, where = enyo.where
 		, remove = enyo.remove
 		, forEach = enyo.forEach
@@ -13,103 +13,70 @@
 		, map = enyo.map
 		, nar = enyo.nar
 		, filter = enyo.filter
-		, inherit = enyo.inherit;
+		, inherit = enyo.inherit
+		, extend = enyo.kind.statics.extend;
 		
 	// var defaultConfig = {};
+	var ComputedSupport;
 	
 	/**
 		@private
 	*/
-	function getComputedValue (name, fn) {
-		var conf = getConfig.call(this, name);
+	function getComputedValue (obj, path) {
+		var cache = obj._getComputedCache(path)
+			, isCached = obj._isComputedCached(path);
 		
-		if (conf.cached) {
-			if (conf.dirty) {
-				conf.dirty = false;
-				conf.prev = conf.value;
-				conf.value = fn.call(this);
-			}
-		} else {
-			conf.prev = conf.value;
-			conf.value = fn.call(this);
+		// in the end, for efficiency and completeness in other situations
+		// it is better to know the returned value of all computed properties
+		// but in cases where they are set as cached we will sometimes use
+		// that value
+		if (cache.dirty || cache.dirty === undefined) {
+			isCached && (cache.dirty = false);
+			cache.previous = cache.value;
+			cache.value = obj[path]();
 		}
 		
-		return conf.value;
+		return cache.value;
 	}
 	
 	/**
 		@private
 	*/
-	function getConfig (name) {
-		var configs = this._computedConfig || (this._computedConfig = {})
-			, loc = configs[name];
-		
-		// to have a config entry for the given method we only need to access its
-		// original configuration in one of them (there could be many) because it
-		// is shared
-		if (!loc) {
-			loc = where(this.computed(), function (ln) {
-				return ln.name == name;
-			});
+	function queueComputed (obj, path) {
+		var queue = obj._computedQueue || (obj._computedQueue = [])
+			, deps = obj._computedDependencies[path];
 			
-			if (loc.config) {
-				configs[name] = clone(loc.config);
-				configs[name].dirty = true;
-			} else configs[name] = {};
-			
-			// configs[name] = loc = loc.config? clone(loc.config): {};
-			loc = configs[name];
+		if (deps) for (var i=0, dep; (dep=deps[i]); ++i) {
+			if (!queue.length || -1 == indexOf(dep, queue)) queue.push(dep);
 		}
-		
-		return loc;
 	}
 	
 	/**
 		@private
 	*/
-	function queueComputed (path) {
-		var queue = this._computedQueue || (this._computedQueue = [])
-			, deps = filter(this.computed(), function (ln) {
-				return ln.path == path;
-			});
+	function flushComputed (obj) {
+		var queue = obj._computedQueue;
 		
-		forEach(deps, function (dep) {
-			if (!queue.length || -1 == indexOf(dep, queue)) {
-				queue.push(dep);
-			}
-		});
-	}
-	
-	/**
-		@private
-	*/
-	function flushComputed () {
-		var queue = this._computedQueue
-			, conf;
-		
-		this._computedQueue = null;
-		queue && forEach(queue, function (ln) {
-			conf = getConfig.call(this, ln.name);
-			if (conf.cached) conf.dirty = true;
-			this.notify(ln.name, conf.prev, getComputedValue.call(this, ln.name, ln.method));
-		}, this);
+		obj._computedQueue = null;
+		if (queue && obj.isObserving()) for (var i=0, ln; (ln=queue[i]); ++i) {
+			obj.notify(ln, obj.lastKnownValue(ln), getComputedValue(obj, ln));
+		}
 	}
 	
 	/**
 		@public
 		@mixin
 	*/
-	enyo.ComputedSupport = {
+	ComputedSupport = enyo.ComputedSupport = {
 		name: "ComputedSupport",
 		
 		/**
 			@public
 			@method
 		*/
-		isComputed: function (match) {
-			return !! where(this.computed(), function (ln) {
-				return ln.method === match || ln.name == match;
-			});
+		isComputed: function (path) {
+			// if it exists it will be explicitly one of these cases and it is cheaper than hasOwnProperty
+			return (this._computed[path] === true || this._computed[path] === false);
 		},
 		
 		/**
@@ -117,9 +84,7 @@
 			@method
 		*/
 		isComputedDependency: function (path) {
-			return !! where(this.computed(), function (ln) {
-				return ln.path == path;
-			});
+			return !! this._computedDependencies[path];
 		},
 		
 		/**
@@ -128,17 +93,7 @@
 		*/
 		get: inherit(function (sup) {
 			return function (path) {
-				var ret = sup.apply(this, arguments);
-				
-				// we only care to add to the workload if the return value is actually
-				// a function - which is the most likely scenario to find a computed method
-				if (isFunction(ret)) {
-					if (this.isComputed(ret)) {
-						ret = getComputedValue.call(this, path, ret);
-					}
-				}
-				
-				return ret;
+				return this.isComputed(path)? getComputedValue(this, path): sup.apply(this, arguments);
 			};
 		}),
 		
@@ -148,7 +103,8 @@
 		*/
 		set: inherit(function (sup) {
 			return function (path) {
-				return this.isComputed(this[path])? this: sup.apply(this, arguments);
+				// we do not accept parameters for computed properties
+				return this.isComputed(path)? this: sup.apply(this, arguments);
 			};
 		}),
 		
@@ -166,9 +122,9 @@
 		*/
 		notify: inherit(function (sup) {
 			return function (path, was, is) {
-				this.isComputedDependency(path) && queueComputed.call(this, path);
+				this.isComputedDependency(path) && queueComputed(this, path);
 				sup.apply(this, arguments);
-				this._computedQueue && flushComputed.call(this);
+				this._computedQueue && flushComputed(this);
 			};
 		}),
 		
@@ -176,18 +132,27 @@
 			@private
 			@method
 		*/
-		computed: function (match) {
-			var computed = this._kindComputed || (this._kindComputed = (
-				this.kindComputed? map(this.kindComputed, function (ln) {
-					ln = clone(ln);
-					ln.ctx = this;
-					return ln;
-				}, this): []
-			));
-			
-			return !match? computed: filter(computed, function (ln) {
-				return ln.method === match || ln.name == match;
-			});
+		lastKnownValue: inherit(function (sup) {
+			return function (path) {
+				return this.isComputed(path)? this._getComputedCache(path).value: sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@private
+			@method
+		*/
+		_isComputedCached: function (path) {
+			return this._computed[path];
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		_getComputedCache: function (path) {
+			var cache = this._computedCache || (this._computedCache = {});
+			return cache[path] || (cache[path] = {});
 		}
 	};
 	
@@ -204,69 +169,59 @@
 		sup.call(this, ctor, props);
 	
 		// only matters if there are computed properties to manage
-		if (props.computed && !isFunction(props.computed)) {
+		if (props.computed && !/*isFunction*/(typeof props.computed == "function")) {
+			
 			var proto = ctor.prototype || ctor
-				, computed = proto.kindComputed? proto.kindComputed.slice(): null
-				, old;
+				, computed = proto._computed? clone(proto._computed): {}
+				, dependencies = proto._computedDependencies? clone(proto._computedDependencies): {};
+			
+			// if it hasn't already been applied we need to ensure that the prototype will
+			// actually have the computed support mixin present, it will not apply it more
+			// than once to the prototype
+			extend(ComputedSupport, proto);
 		
-			// the previous, still _ok_ but hopefully deprecated way of declaring
-			// computed for a kind
-			if (isObject(props.computed)) {
-				old = props.computed;
-				props.computed = [];
-				forEach(keys(old), function (fn) {
-					var deps = old[fn]
-						, conf;
-						
-					conf = where(deps, function (ln) {
-						if (isObject(ln)) {
-							
-							// deliberate modification of the array because we won't
-							// be iterating any further
-							remove(ln, deps);
-							return true;
-						}
-					});
-					
-					forEach(deps, function (dep) {
-						props.computed.push({
-							method: props[fn] || proto[fn],
-							name: fn,
-							path: dep,
-							config: conf
+			// @NOTE: This is the handling of the original syntax provided for computed properties in 2.3.ish...
+			// All we do here is convert it to a structure that can be used for the other scenario and preferred
+			// computed declarations format
+			if (!isArray(props.computed)) {
+				(function () {
+					var tmp = [], deps, i, name, dep, conf;
+					// here is the slow iteration over the properties...
+					for (name in props.computed) {
+						// points to the dependencies of the computed method
+						deps = props.computed[name];
+						conf = deps && where(deps, function (ln) {
+							// we deliberately remove the entry here and forcibly return true to break
+							return typeof ln == "object"? (remove(ln, deps) || true): false;
 						});
-					});
-				});
-			} else {
-				var xtra;
-				
-				props.computed = filter(props.computed, function (ln) {
-					if (isString(ln.method)) {
-						ln.name = ln.method;
-						ln.method = props[ln.method] || proto[ln.method];
+						// create a single entry now for the method/computed with all dependencies
+						tmp.push({method: name, path: deps, cached: conf? conf.cached: null});
 					}
-					if (isArray(ln.path)) {
-						xtra || (xtra = []);
-						forEach(ln.path, function (path) {
-							xtra.push({
-								path: path,
-								name: ln.name,
-								method: ln.method,
-								config: ln.config
-							});
-						});
-						return false;
-					}
-					return true;
-				});
-				
-				xtra && (props.computed = props.computed.concat(xtra));
+					props.computed = tmp;
+				}());
 			}
 			
-			computed = computed? computed.concat(props.computed): props.computed;
+			var addDependency = function (path, dep) {
+				// its really an inverse look at the original
+				(dependencies[path] || (dependencies[path] = [])).push(dep);
+			};
 			
+			// now we handle the new computed properties the way we intended to
+			for (var i=0, ln; (ln=props.computed[i]); ++i) {
+				// if the entry already exists we are merely updating whether or not it is
+				// now cached
+				computed[ln.method] = !! ln.cached;
+				// we must now look to add an entry for any given dependencies and map them
+				// back to the computed property they will trigger
+				if (isArray(ln.path)) forEach(ln.path, function (dep) { addDependency(dep, ln.method); });
+				else if (ln.path) addDependency(ln.path, ln.method);
+			}
+			
+			// arg, free the key from the properties so it won't be applied later...
 			delete props.computed;
-			proto.kindComputed = computed;
+			// make sure to reassign the correct items to the prototype
+			proto._computed = computed;
+			proto._computedDependencies = dependencies;
 		}
 	};
 	

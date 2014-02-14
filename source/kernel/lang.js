@@ -72,10 +72,10 @@
 	*/
 	var getPath = enyo.getPath = function (path) {
 		// we're trying to catch only null/undefined not empty string or 0 cases
-		if (!path && !enyo.exists(path)) return path;
+		if (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined) return path;
 		
 		var next = (this === enyo? enyo.global: this)
-			, parts, part, getter;
+			, parts, part, getter, prev, prevPart;
 		
 		// obviously there is a severe penalty for requesting get with a path lead
 		// by unnecessary relative notation...
@@ -88,6 +88,8 @@
 		part = parts.shift();
 		
 		do {
+			prev = next;
+			prevPart = part;
 			// for constructors we must check to make sure they are undeferred before
 			// looking for static properties
 			if (next.prototype) next = enyo.checkConstructor(next);
@@ -99,6 +101,8 @@
 			// and for regular cases
 			else next = next[part];
 		} while (next && (part = parts.shift()));
+		
+		if (prev._getCache) prev._getCache()[prevPart] = next;
 		
 		// if necessary we ensure we've undeferred any constructor that we're
 		// retrieving here as a final property as well
@@ -116,6 +120,9 @@
 		} else {
 			v = b[path];
 		}
+		
+		if (b._getCache) b._getCache()[path] = v;
+		
 		return (("function" == typeof v && enyo.checkConstructor(v)) || v);
 	};
 
@@ -137,14 +144,15 @@
 	*/
 	var setPath = enyo.setPath = function (path, is, opts) {
 		// we're trying to catch only null/undefined not empty string or 0 cases
-		if (!path && !enyo.exists(path)) return this;
+		if (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined) return this;
 		
 		var next = (this === enyo? enyo.global: this)
 			, base = next
 			, parts, part, was, force;
 		
 		// for backwards compatibility
-		force = isObject(opts)? opts.force: opts;
+		force = /*isObject(opts)*/ typeof opts == "object"? opts.force: opts;
+		opts || (opts = {});
 		
 		// obviously there is a severe penalty for requesting get with a path lead
 		// by unnecessary relative notation...
@@ -158,7 +166,7 @@
 		
 		do {
 			
-			if (!parts.length) was = next.get? next.get(part): next[part];
+			if (!parts.length) was = /*next.get? next.get(part): next[part]*/ next.lastKnownValue? next.lastKnownValue(part): next[part];
 			else {
 				if (next.prototype) next = enyo.checkConstructor(next);
 				next = (next !== base && next.get? next.get(part): next[part]) || (next[part] = {});
@@ -169,9 +177,12 @@
 		// now update to the new value
 		next[part] = is;
 		
+		// we look for the ability to update the cache of the object when possible
+		if (next._getCache) next._getCache()[part] = is;
+		
 		// if possible we notify the changes but this change is notified from the immediate
 		// parent not the root object (could be the same)
-		if (next.notify && (force || was !== is || (opts && opts.comparator && opts.comparator(was, is)))) next.notify(part, was, is);
+		if (next.notify && !opts.silent && (force || was !== is || (opts.comparator && opts.comparator(was, is)))) next.notify(part, was, is);
 		// we will always return the original root-object of the call
 		return base;
 	};
@@ -195,6 +206,9 @@
 		}
 		// set the new value now that we can
 		b[path] = value;
+		
+		if (b._getCache) b._getCache()[path] = value;
+		
 		// this method is only ever called from the context of enyo objects
 		// as a protected method
 		if (rv !== value) { b.notifyObservers(path, rv, value); }
