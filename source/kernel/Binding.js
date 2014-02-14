@@ -4,8 +4,8 @@
 		, mixin = enyo.mixin
 		, uid = enyo.uid
 		, where = enyo.where
-		, isString = enyo.isString
-		, isObject = enyo.isObject
+		// , isString = enyo.isString
+		// , isObject = enyo.isObject
 		, isFunction = enyo.isFunction
 		, getPath = enyo.getPath
 		, remove = enyo.remove
@@ -29,8 +29,8 @@
 				, target = binding.target
 				, owner = binding.owner;
 			
-			isString(from) || (from = "");
-			isString(to) || (to = "");
+			/*isString(from)*/ (typeof from == "string") || (from = "");
+			/*isString(to)*/ (typeof to == "string") || (to = "");
 			
 			if (!source) {
 				
@@ -40,7 +40,7 @@
 					
 					// this means we're reaching for a global
 					from = from.slice(1);
-					source = getPath.call(window, from);
+					source = getPath.call(enyo.global, from);
 					
 				} else {
 					source = owner;
@@ -56,7 +56,7 @@
 					
 					// this means we're reaching for a global
 					to = to.slice(1);
-					target = getPath.call(window, to);
+					target = getPath.call(enyo.global, to);
 				} else {
 					target = owner;
 				}
@@ -69,8 +69,8 @@
 			
 			// now our sanitation
 			rdy = !! (
-				(source && isObject(source)) &&
-				(target && isObject(target)) &&
+				(source && /*isObject(source)*/ (typeof source == "object")) &&
+				(target && /*isObject(target)*/ (typeof source == "object")) &&
 				(from) &&
 				(to)
 			);
@@ -221,15 +221,19 @@
 					, val;
 					
 				switch (this.dirty) {
-				case DIRTY_FROM:
-					val = source.get(from);
-					xform && (val = xform(val, DIRTY_FROM, this));
-					!this._stop && target.set(to, val);
-					break;
 				case DIRTY_TO:
 					val = target.get(to);
 					xform && (val = xform(val, DIRTY_TO, this));
 					!this._stop && source.set(from, val);
+					break;
+				case DIRTY_FROM:
+					
+				// @TODO: This should never need to happen but is here just in case
+				// it is ever arbitrarily called not having been dirty?
+				default:
+					val = source.get(from);
+					xform && (val = xform(val, DIRTY_FROM, this));
+					!this._stop && target.set(to, val);
 					break;
 				}
 				this.dirty = null;

@@ -10,11 +10,12 @@
 		, indexOf = enyo.indexOf
 		, clone = enyo.clone
 		, keys = enyo.keys
+		, map = enyo.map
 		, nar = enyo.nar
 		, filter = enyo.filter
 		, inherit = enyo.inherit;
 		
-	var defaultConfig = {};
+	// var defaultConfig = {};
 	
 	/**
 		@private
@@ -51,7 +52,13 @@
 				return ln.name == name;
 			});
 			
-			configs[name] = loc = loc.config? clone(loc.config): defaultConfig;
+			if (loc.config) {
+				configs[name] = clone(loc.config);
+				configs[name].dirty = true;
+			} else configs[name] = {};
+			
+			// configs[name] = loc = loc.config? clone(loc.config): {};
+			loc = configs[name];
 		}
 		
 		return loc;
@@ -83,7 +90,7 @@
 		this._computedQueue = null;
 		queue && forEach(queue, function (ln) {
 			conf = getConfig.call(this, ln.name);
-			
+			if (conf.cached) conf.dirty = true;
 			this.notify(ln.name, conf.prev, getComputedValue.call(this, ln.name, ln.method));
 		}, this);
 	}
@@ -111,7 +118,7 @@
 		*/
 		isComputedDependency: function (path) {
 			return !! where(this.computed(), function (ln) {
-				ln.path == path;
+				return ln.path == path;
 			});
 		},
 		
@@ -170,7 +177,13 @@
 			@method
 		*/
 		computed: function (match) {
-			var computed = this.kindComputed || (this.kindComputed = nar);
+			var computed = this._kindComputed || (this._kindComputed = (
+				this.kindComputed? map(this.kindComputed, function (ln) {
+					ln = clone(ln);
+					ln.ctx = this;
+					return ln;
+				}, this): []
+			));
 			
 			return !match? computed: filter(computed, function (ln) {
 				return ln.method === match || ln.name == match;

@@ -3,14 +3,14 @@
 	var kind = enyo.kind
 		, inherit = enyo.inherit
 		, bind = enyo.bindSafely
-		, isObject = enyo.isObject
+		// , isObject = enyo.isObject
 		, forEach = enyo.forEach;
 		
 	var LinkedList = enyo.LinkedList
 		, LinkedListNode = enyo.LinkedListNode;
 	
 	function get (base, prop) {
-		return base && isObject(base)? (
+		return base && /*isObject(base)*/ (typeof base == "object")? (
 			base.get? base.get(prop): base[prop]
 		): undefined;
 	}
@@ -69,29 +69,31 @@
 			var obj = this.object
 				, obs = this.onChange
 				, prop = this.property;
-			obj && obj.unobserve && obj.unobserve(prop, obs);
+			obj && obj.unobserve && obj.unobserve(prop, obs, this);
 		},
 		
 		/**
 			@public
 			@method
 		*/
-		setObject: function (object) {
+		setObject: function (object, was, is) {
 			var cur = this.object
 				, prop = this.property
 				, was, is;
 			
 			if (cur !== object) {
-				was = get(cur, prop);
-				is = get(object, prop);
 				this.disconnect();
 				this.object = object;
 				this.connect();
 				
-				// @TODO: It would be better to somehow cache values
-				// such that it could intelligently derive the difference
-				// without needing to continuously look it up with get
-				was !== is && this.list.observed(this, was, is);
+				if (this.list.tail === this) {
+					// was = get(cur, prop);
+					// is = get(object, prop);
+					// @TODO: It would be better to somehow cache values
+					// such that it could intelligently derive the difference
+					// without needing to continuously look it up with get
+					was !== is && this.list.observed(this, was, is);
+				}
 			}
 		},
 		
@@ -142,14 +144,14 @@
 			@private
 			@method
 		*/
-		rebuild: function (target) {
+		rebuild: function (target, was, is) {
 			if (!this.rebuilding) {
 				this.rebuilding = true;
 				this.forward(function (node) {
 					if (node !== this.head) {
 						var src = node.prev.object
 							, prop = node.prev.property;
-						node.setObject(get(src, prop));
+						node.setObject(get(src, prop), was, is);
 					}
 				}, this, target);
 				this.rebuilding = false;
@@ -179,9 +181,11 @@
 				, next = this.object
 				, last = parts.length - 1
 				, $ = false
-				, node;
+				, node, prop;
 				
-			forEach(parts, function (prop, idx) {
+			for (var i=0; (prop=parts[i]); ++i) {
+				
+			// forEach(parts, function (prop, idx) {
 				// we create a special case for the $ hash property
 				if (prop == "$") {
 					$ = true;
@@ -190,13 +194,13 @@
 					// force it onto our current nodes property and let the special handling
 					// in ObserverChainNode and ObserverSupport handle the rest
 					$ && (prop = "$." + prop);
-					
 					node = this.createNode({property: prop, object: next, list: this});
 					this.appendNode(node);
 					next = get(next, prop);
 					$ = false;
 				}
-			}, this);
+			// }, this);
+			}
 		},
 		
 		/**
@@ -205,8 +209,14 @@
 		*/
 		observed: function (node, was, is) {
 			this.object.stopNotifications();
-			node !== this.head && was !== is && this.object.notify(this.buildPath(node), was, is);
-			this.rebuild(node);			
+			// @NOTE: About the following two cases, they are mutually exclusive and this seems perfect
+			// that we don't see double notifications
+			// @TODO: Only notify if it was the full property path? This is far more efficient after
+			// testing but not as flexible...
+			node === this.tail && was !== is && this.object.notify(this.buildPath(node), was, is);
+			// @TODO: It seems the same case across the board that the rebuild only needs to take place
+			// from the beginning to the second-to-last elem
+			node !== this.tail && was !== is && this.rebuild(node, was, is);			
 			this.object.startNotifications();
 		}
 	});
