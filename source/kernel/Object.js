@@ -160,7 +160,7 @@ enyo.kind({
 		@param {String} prop The property to lookup in the cache.
 	*/
 	lastKnownValue: function (prop) {
-		return this._getCache()[prop];
+		return this._getCache()[prop] || this.get(prop);
 	},
 	
 	//*@public

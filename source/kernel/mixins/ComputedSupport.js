@@ -185,7 +185,7 @@
 			// computed declarations format
 			if (!isArray(props.computed)) {
 				(function () {
-					var tmp = [], deps, i, name, dep, conf;
+					var tmp = [], deps, name, conf;
 					// here is the slow iteration over the properties...
 					for (name in props.computed) {
 						// points to the dependencies of the computed method

@@ -16,7 +16,8 @@
 		, nop = enyo.nop
 		, observerTable = {};
 		
-	var ObserverChain = enyo.ObserverChain;
+	var ObserverChain = enyo.ObserverChain
+		, ObserverSupport;
 		
 	/**
 		@private
@@ -39,57 +40,56 @@
 	/**
 		@private
 	*/
-	function removeObserver (path, fn) {
-		var observers = this.observers()
-			, idx;
+	function removeObserver (obj, path, fn) {
+		var observers = obj.observers()
+			, chains = obj.chains()
+			, idx, chain;
 		
 		if (observers.length) {
 			idx = findIndex(observers, function (ln) {
 				return ln.path == path && ln.method === fn;
 			});
-			idx >= 0 && observers.splice(idx, 1);
+			idx > -1 && observers.splice(idx, 1);
 		}
 		
-		if (path.indexOf(".") > 0) {
-			this._observerChains = filter(this.chains(), function (ln) {
-				if (ln.path == path) {
-					ln.destroy();
-					return false;
+		if (chains.length && path.indexOf(".") > 0) {
+			for (idx=chains.length-1; (chain=chains[idx]); --idx) {
+				if (chain.path == path) {
+					chains.splice(idx, 1);
+					chain.destroy();
 				}
-				return true;
-			});
+			}
 		}
 		
-		return this;
+		return obj;
 	}
 	
 	/**
 		@private
 	*/
-	function notifyObservers (path, was, is) {
-		if (this.isObserving()) {
+	function notifyObservers (obj, path, was, is) {
+		if (obj.isObserving()) {
 			
-			var observers = this.observers(path);
+			var observers = obj.observers(path);
 			
-			if (observers.length) {
-				forEach(observers, function (ln) {
-					ln.method.call(ln.ctx || (ln.ctx = this), was, is, path);
-				}, this);
+			if (observers.length) for (var i=0, ln; (ln=observers[i]); ++i) {
+				if (typeof ln.method == "string") obj[ln.method](was, is, path);
+				else ln.method.call(ln.ctx || obj, was, is, path);
 			}
 			
 		} else {
-			enqueue.call(this, path, was, is);
+			enqueue.call(obj, path, was, is);
 		}
 		
-		return this;
+		return obj;
 	}
 	
 	/**
 		@private
 	*/
-	function enqueue (path, was, is) {
-		if (this._notificationQueueEnabled) {
-			var queue = this._notificationQueue || (this._notificationQueue = {})
+	function enqueue (obj, path, was, is) {
+		if (obj._notificationQueueEnabled) {
+			var queue = obj._notificationQueue || (obj._notificationQueue = {})
 				, ln = queue[path] || (queue[path] = {});
 		
 			ln.was = was;
@@ -100,16 +100,16 @@
 	/**
 		@private
 	*/
-	function flushQueue () {
-		var queue = this._notificationQueue
+	function flushQueue (obj) {
+		var queue = obj._notificationQueue
 			, path, ln;
 		
 		if (queue) {
-			this._notificationQueue = null;
+			obj._notificationQueue = null;
 			
 			for (path in queue) {
 				ln = queue[path];
-				this.notify(path, ln.was, ln.is);
+				obj.notify(path, ln.was, ln.is);
 			}
 		}
 	}
@@ -118,7 +118,7 @@
 		@public
 		@mixin
 	*/
-	enyo.ObserverSupport = {
+	ObserverSupport = enyo.ObserverSupport = {
 		name: "ObserverSupport",
 		
 		/**
@@ -158,11 +158,10 @@
 				, loc;
 				
 			loc = observerTable[euid] || (observerTable[euid] = (
-				this.kindObservers? map(this.kindObservers, function (ln) {
-					ln = clone(ln);
-					ln.ctx = this;
-					return ln;
-				}, this): []
+				// @TODO: When there is an opportunity come back and modify how the observers
+				// are dereferenced later so we don't need to deep clone the array of existing
+				// ones
+				this._observers? this._observers.slice(): []
 			));
 	
 			return !path? loc: filter(loc, function (ln) {
@@ -182,7 +181,8 @@
 			@public
 			@method
 		*/
-		addObserver: function (path, fn, ctx) {
+		addObserver: function () {
+			// @NOTE: In this case we use apply because of internal variable use of parameters
 			return addObserver.apply(this, arguments);
 		},
 		
@@ -191,7 +191,8 @@
 			@method
 			@alias addObserver
 		*/
-		observe: function (path, fn, ctx) {
+		observe: function () {
+			// @NOTE: In this case we use apply because of internal variable use of parameters
 			return addObserver.apply(this, arguments);
 		},
 		
@@ -200,7 +201,7 @@
 			@method
 		*/
 		removeObserver: function (path, fn) {
-			return removeObserver.call(this, path, fn);
+			return removeObserver(this, path, fn);
 		},
 		
 		/**
@@ -209,7 +210,7 @@
 			@alias removeObserver
 		*/
 		unobserve: function (path, fn) {
-			return removeObserver.call(this, path, fn);
+			return removeObserver(this, path, fn);
 		},
 		
 		/**
@@ -238,7 +239,7 @@
 			@method
 		*/
 		notifyObservers: function (path, was, is) {
-			return notifyObservers.call(this, path, was, is);
+			return notifyObservers(this, path, was, is);
 		},
 		
 		/**
@@ -247,7 +248,7 @@
 			@alias notifyObservers
 		*/
 		notify: function (path, was, is) {
-			return notifyObservers.call(this, path, was, is);
+			return notifyObservers(this, path, was, is);
 		},
 		
 		/**
@@ -269,7 +270,7 @@
 			this._observeCount && this._observeCount--;
 			this._observeCount === 0 && (this._observing = true);
 			queue && this.enableNotificationQueue();
-			this.isObserving() && flushQueue.call(this);
+			this.isObserving() && flushQueue(this);
 			return this;
 		},
 		
@@ -298,16 +299,14 @@
 		*/
 		constructor: inherit(function (sup) {
 			return function () {
-				var chains;
+				var chains, chain;
 				
 				// if there are any observers that need to create dynamic chains
 				// we look for and instance those now
 				if (this._observerChains) {
 					chains = this._observerChains.slice();
 					this._observerChains = [];
-					forEach(chains, function (chain) {
-						this.addObserver(chain.path, chain.method);
-					}, this);
+					for (var i=0; (chain=chains[i]); ++i) this.observe(chain.path, chain.method);
 				}
 				
 				sup.apply(this, arguments);
@@ -323,10 +322,7 @@
 				sup.apply(this, arguments);
 				
 				if (this._observerChains) {
-					forEach(this._observerChains, function (chain) {
-						chain.destroy();
-					});
-					
+					for (var i=0, chain; (chain=this._observerChains[i]); ++i) chain.destroy();
 					this._observerChains = null;
 				}
 			};
@@ -345,104 +341,56 @@
 		
 		sup.call(this, ctor, props);
 		
-		var proto = ctor.prototype || ctor;
+		if (props === ObserverSupport) return;
+		
+		var proto = ctor.prototype || ctor
+			, observers = proto._observers? proto._observers.slice(): []
+			, incoming = props.observers
+			, chains = proto._observerChains? proto._observerChains.slice(): null;
+			
+		// if there are incoming observers we need to figure them out possibly modify them
+		// if they are declared in the older syntax/style
+		// @NOTE: For observers declared according to the original syntax from 2.3...ish
+		if (incoming) {
+			if (!isArray(incoming)) {
+				(function () {
+					var tmp = [], name, deps;
+					// the slow iteration of properties...
+					for (name in incoming) {
+						deps = incoming[name];
+						tmp.push({method: name, path: deps});
+					}
+					incoming = tmp;
+				}());
+			}
+		}
 		
 		// this scan is required to figure out what auto-observers might be present
 		for (var key in props) {
 			if (key.slice(-7) == "Changed") {
-				// ok we found one but in backward-compatibility mode we have to figure out
-				// if there are any observers and if so ensure we add them the correct way
-				// the easiest case being non-existant as we know exactly what to do
-				if (!props.observers || isArray(props.observers)) {
-					props.observers = props.observers || [];
-					// it should never have been manually added so we don't make the expensive
-					// move and look it up
-					props.observers.push({
-						path: key.slice(0, -7),
-						method: isInherited(props[key])? props[key].fn(proto[key] || nop): props[key]
-					});
-				} else {
-					// we don't do the conversion now for objects as that is about to be done
-					// so we have to, sadly, add them in the old way to be properly converted
-					// in the next pass
-					props.observers[key] || (props.observers[key] = []);
-					props.observers[key].push(key.slice(0, -7));
-				}
+				incoming || (incoming = []);
+				incoming.push({method: key, path: key.slice(0, -7)});
 			}
 		}
 		
-		// only matters if there are observers to manage in the properties
-		if (props.observers && !isFunction(props.observers)) {
-			var observers = proto.kindObservers? proto.kindObservers.slice(): null
-				, chains = proto._observerChains? proto._observerChains.slice(): null
-				, old;
-			
-			// the previous, still _ok_ but hopefully deprecated way of declaring
-			// observers for a kind
-			if (isObject(props.observers)) {
-				old = props.observers;
-				props.observers = [];
-				forEach(keys(old), function (fn) {
-					forEach(old[fn], function (dep) {
-						if (dep.indexOf(".") >= 0) {
-							chains || (chains = []);
-							chains.push({
-								path: dep,
-								method: isInherited(props[fn])? props[fn].fn(proto[fn] || nop): (props[fn] || proto[fn])
-							});
-						} else {
-							props.observers.push({
-								path: dep,
-								method: isInherited(props[fn])? props[fn].fn(proto[fn] || nop): (props[fn] || proto[fn])
-							});
-						}
-					});
-				});
-			} else {
-				var xtra;
-				
-				props.observers = filter(props.observers, function (ln) {
-					if (isString(ln.method)) {
-						var fn = props[ln.method] || proto[ln.methiod];
-						ln.method = isInherited(fn)? fn.fn(proto[ln.method] || nop): fn;
-					}
-					if (isArray(ln.path)) {
-						xtra || (xtra = []);
-						forEach(ln.path, function (path) {
-							if (path.indexOf(".") >= 0) {
-								chains || (chains = []);
-								chains.push({
-									path: path,
-									method: ln.method
-								});
-							} else {
-								xtra.push({
-									path: path,
-									method: ln.method
-								});
-							}
-						});
-						return false;
-					} else if (ln.path.indexOf(".") >= 0) {
-						chains || (chains = []);
-						chains.push({
-							path: ln.path,
-							method: ln.method
-						});
-						return false;
-					}
-					return true;
-				});
-				
-				xtra && (props.observers = props.observers.concat(xtra));
-			}
-			
-			observers = observers? observers.concat(props.observers): props.observers;
+		var addObserverEntry = function (path, method) {
+			// we have to make sure that the path isn't a chain because if it is we add it
+			// to the chains instead
+			if (path.indexOf(".") > -1) (chains || (chains = [])).push({path: path, method: method});
+			else observers.push({path: path, method: method});
+		};
 		
-			delete props.observers;
-			proto.kindObservers = observers;
-			proto._observerChains = chains;
-		}
+		if (incoming) forEach(incoming, function (ln) {
+			// first we determine if the path itself is an array of paths to observe
+			if (isArray(ln.path)) forEach(ln.path, function (en) { addObserverEntry(en, ln.method); });
+			else addObserverEntry(ln.path, ln.method);
+		});
+		
+		// we clear the key so it will not be added to the prototype
+		delete props.observers;
+		// we update the properties to whatever their new values may be
+		proto._observers = observers;
+		proto._observerChains = chains;
 	};
 	
 })(enyo);
