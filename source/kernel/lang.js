@@ -355,24 +355,15 @@
 	};
 
 	/**
-		Invokes _inFunc_ on each element of _inArray_.
-		If _inContext_ is specified, _inFunc_ is called with _inContext_ as _this_.
+		@public
+		@method
 	*/
-	enyo.forEach = function(inArray, inFunc, inContext) {
-		if (inArray) {
-			var c = inContext || this;
-			if (enyo.isArray(inArray) && inArray.forEach) {
-				inArray.forEach(inFunc, c);
-			} else {
-				var a = Object(inArray);
-				var al = a.length >>> 0;
-				for (var i = 0; i < al; i++) {
-					if (i in a) {
-						inFunc.call(c, a[i], i, a);
-					}
-				}
-			}
-		}
+	enyo.forEach = function(array, fn, ctx) {
+		if (array.forEach) return array.forEach(fn, ctx);
+		// @NOTE: It is not promised that the array passed in is immutable much less that
+		// changes won't have an undesirable affect so lets not create unnecessary overhead
+		// copying arrays
+		for (var i=0, len=array.length; i<len; ++i) fn.call(ctx, array[i], array);
 	};
 	var forEach = enyo.forEach;
 
@@ -820,9 +811,7 @@
 		}
 
 		if (isArray(src)) {
-			forEach(src, function (it) {
-				mixin(ret, it, opts);
-			});
+			for (var i=0, it; (it=src[i]); ++i) mixin(ret, it, opts);
 		} else {
 			for (var key in src) {
 				val = src[key];

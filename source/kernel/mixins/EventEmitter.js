@@ -53,10 +53,8 @@
 			} else {
 				args = [obj, e];
 			}
-			
-			forEach(listeners, function (ln) {
-				ln.method.apply(ln.ctx, args);
-			});
+
+			for (var i=0, ln; (ln=listeners[i]); ++i) ln.method.apply(ln.ctx, args);
 			
 			return true;
 		}

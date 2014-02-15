@@ -76,7 +76,7 @@
 		*/
 		isComputed: function (path) {
 			// if it exists it will be explicitly one of these cases and it is cheaper than hasOwnProperty
-			return (this._computed[path] === true || this._computed[path] === false);
+			return this._computed && (this._computed[path] === true || this._computed[path] === false);
 		},
 		
 		/**
@@ -84,7 +84,7 @@
 			@method
 		*/
 		isComputedDependency: function (path) {
-			return !! this._computedDependencies[path];
+			return !! (this._computedDependencies? this._computedDependencies[path]: false);
 		},
 		
 		/**

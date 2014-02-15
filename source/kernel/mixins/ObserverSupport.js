@@ -78,7 +78,7 @@
 			}
 			
 		} else {
-			enqueue.call(obj, path, was, is);
+			enqueue(obj, path, was, is);
 		}
 		
 		return obj;
