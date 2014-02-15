@@ -215,16 +215,24 @@ enyo.kind({
 			}
 		}
 	},
-	modelsAdded: function (c, e, props) {
-		if (c == this.collection) {
+	modelsAdded: function (sender, e, props) {
+		if (sender === this.collection) {
 			this.set("batching", true);
-			// note that these are indices when being added so they can be lazily
-			// instantiated
-			for (var i=0, r; (!isNaN(r=props.records[i])); ++i) {
-				this.add(c.at(r), r);
-			}
+			this.refresh();
 			this.set("batching", false);
 		}
+		
+		
+	// modelsAdded: function (c, e, props) {
+		// if (c == this.collection) {
+		// 	this.set("batching", true);
+		// 	// note that these are indices when being added so they can be lazily
+		// 	// instantiated
+		// 	// for (var i=0, r; (!isNaN(r=props.records[i])); ++i) {
+		// 	// 	this.add(c.at(r), r);
+		// 	// }
+		// 	this.set("batching", false);
+		// }
 	},
 	modelsRemoved: function (c, e, props) {
 		if (c == this.collection) {

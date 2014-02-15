@@ -28,7 +28,7 @@
 	*/
 	var BaseModel = kind({
 		kind: null,
-		mixins: [ObserverSupport, ComputedSupport, BindingSupport, EventEmitter, ProxyObject]
+		mixins: [ObserverSupport, ComputedSupport, BindingSupport, EventEmitter/*, ProxyObject*/]
 	});
 	
 	/**
@@ -74,7 +74,7 @@
 		/**
 			@private
 		*/
-		proxyObjectKey: "attributes",
+		// proxyObjectKey: "attributes",
 		
 		/**
 			@public
@@ -134,53 +134,61 @@
 			@public
 			@method
 		*/
-		get: inherit(function (sup) {
-			return function (path) {
-				return this.isComputed(path)? this.getLocal(path): sup.apply(this, arguments);
-			};
-		}),
+		get: function (path) {
+			return this.isComputed(path)? this.getLocal(path): this.attributes[path];
+		},
 		
 		/**
 			@public
 			@method
 		*/
-		set: inherit(function (sup) {
-			return function (path, is, force) {
-				if (isObject(path)) {
-					// here we want to determine if anything does actually become
-					// updated so we know whether or not to issue our event
-					this.changed = null;
-					this.silence().stopNotifications();
-					for (var key in path) this.set(key, path[key], force);
-					this.unsilence().startNotifications();
-					
-					// if we have a changed object now we know with absolution that
-					// we should emit the event
-					if (this.changed && !this.isSilenced()) this.emit("change", this.changed, this);
-				} else if (this.isComputed(path)) {
-					return this;
-				} else {
-					var previous = this.previous
-						, changed = this.changed
-						, was = this.get(path);
-					
-					sup.apply(this, arguments);
-					
-					if (force || was !== is) {
-						previous || (this.previous = previous = {});
-						changed || (this.changed = changed = {});
-						previous[path] = was;
-						changed[path] = is;
-						
-						// ensure we update our dirty flag
-						this.isDirty = true;
-						
-						!this.isSilenced() && this.emit("change", changed, this);
-					}
+		set: function (path, is, opts) {
+			
+			var attrs = this.attributes
+				, prev = this.previous
+				, changed
+				, incoming
+				, force
+				, silent
+				, key
+				, value;
+				
+			if (typeof path == "object") {
+				incoming = path;
+				opts || (opts = is);
+			} else {
+				incoming = {};
+				incoming[path] = is;
+			}
+			
+			if (opts === true) {
+				force = true;
+				opts = {};
+			}
+			
+			opts || (opts = {});
+			silent = opts.silent;
+			force = force || opts.force;
+			
+			for (key in incoming) {
+				value = incoming[key];
+				
+				if (value !== attrs[key] || force) {
+					prev || (prev = this.previous = {});
+					changed || (changed = this.changed = {});
+					// assign previous value for reference
+					prev[key] = attrs[key];
+					changed[key] = attrs[key] = value;
 				}
-				return this;
-			};
-		}),
+			}
+			
+			if (changed) {
+				// must flag this model as having been updated
+				this.isDirty = true;
+				
+				if (!silent && !this.isSilenced()) this.emit("change", changed, this);
+			}
+		},
 		
 		/**
 			@private
@@ -212,7 +220,7 @@
 			attrs = attrs? opts.parse? this.parse(attrs): attrs: null;
 			
 			// ensure we have the updated attributes
-			this.attributes = this.attributes? clone(this.attributes): {};
+			this.attributes = this.attributes? this.defaults? mixin({}, [this.defaults, this.attributes]): clone(this.attributes): this.defaults? clone(this.defaults): {};
 			attrs && mixin(this.attributes, attrs);
 			
 			// now we need to ensure we have a store and register with it
@@ -222,6 +230,25 @@
 			// should be intelligent enough to avoid doing each individually or in some
 			// cases it may be useful to have a record that is never added to a store?
 			if (!opts || !opts.noAdd) this.store.add(this, opts);
+		},
+		
+		/**
+			@private
+		*/
+		emit: inherit(function (sup) {
+			return function (e, props) {
+				if (e == "change" && props && this.isObserving()) {
+					for (var key in props) this.notify(key, this.previous[key], props[key]);
+				}
+				return sup.apply(this, arguments);
+			};
+		}),
+		
+		/**
+			@private
+		*/
+		triggerEvent: function () {
+			return this.emit.apply(this, arguments);
 		}
 	});
 	

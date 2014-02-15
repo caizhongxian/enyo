@@ -242,7 +242,7 @@
 			@method
 		*/
 		onModelEvent: function (model, e) {
-			this.log(arguments);
+			// this.log(arguments);
 			
 			switch (e) {
 			case "destroy":
