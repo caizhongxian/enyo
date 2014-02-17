@@ -212,7 +212,6 @@ describe ("ModelController", function () {
 			mod2 = new ctor({tooneprop: {name: "model2"}});
 			obj = new enyo.Object();
 			controller = new ModelController();
-			
 			obj.binding({from: "tooneprop.name", source: controller, to: "selectedName"});
 			expect(obj.selectedName).to.be.undefined;
 			controller.set("model", mod1);

@@ -146,19 +146,6 @@ enyo.kind({
 	*/
 	set: enyo.setPath,
 	
-	
-	/**
-		Useful to lookup the last seen value of a property that was either set or retrieved
-		via a getter or setter. It can only be used on local properties.
-		
-		@public
-		@method
-		@param {String} prop The property to lookup in the cache.
-	*/
-	lastKnownValue: function (prop) {
-		return this._getCache()[prop] || this.get(prop);
-	},
-	
 	//*@public
 	/**
 		Binds a callback to this object. If the object has been destroyed, the
@@ -179,10 +166,6 @@ enyo.kind({
 		// to this flag.
 		// Using this.set to make the property observable
 		this.set("destroyed", true);
-	},
-	
-	_getCache: function () {
-		return this.__cache__ || (this.__cache__ = {});
 	},
 	
 	_isObject: true

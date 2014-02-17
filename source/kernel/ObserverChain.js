@@ -76,7 +76,7 @@
 			@public
 			@method
 		*/
-		setObject: function (object, was, is) {
+		setObject: function (object) {
 			var cur = this.object
 				, prop = this.property
 				, was, is;
@@ -87,8 +87,8 @@
 				this.connect();
 				
 				if (this.list.tail === this) {
-					// was = get(cur, prop);
-					// is = get(object, prop);
+					was = get(cur, prop);
+					is = get(object, prop);
 					// @TODO: It would be better to somehow cache values
 					// such that it could intelligently derive the difference
 					// without needing to continuously look it up with get
@@ -144,14 +144,14 @@
 			@private
 			@method
 		*/
-		rebuild: function (target, was, is) {
+		rebuild: function (target) {
 			if (!this.rebuilding) {
 				this.rebuilding = true;
 				this.forward(function (node) {
 					if (node !== this.head) {
 						var src = node.prev.object
 							, prop = node.prev.property;
-						node.setObject(get(src, prop), was, is);
+						node.setObject(get(src, prop));
 					}
 				}, this, target);
 				this.rebuilding = false;
@@ -216,7 +216,7 @@
 			node === this.tail && was !== is && this.object.notify(this.buildPath(node), was, is);
 			// @TODO: It seems the same case across the board that the rebuild only needs to take place
 			// from the beginning to the second-to-last elem
-			node !== this.tail && was !== is && this.rebuild(node, was, is);			
+			node !== this.tail && was !== is && this.rebuild(node);
 			this.object.startNotifications();
 		}
 	});

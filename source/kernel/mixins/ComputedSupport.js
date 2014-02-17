@@ -59,7 +59,7 @@
 		
 		obj._computedQueue = null;
 		if (queue && obj.isObserving()) for (var i=0, ln; (ln=queue[i]); ++i) {
-			obj.notify(ln, obj.lastKnownValue(ln), getComputedValue(obj, ln));
+			obj.notify(ln, obj._getComputedCache(ln).value, getComputedValue(obj, ln));
 		}
 	}
 	
@@ -125,16 +125,6 @@
 				this.isComputedDependency(path) && queueComputed(this, path);
 				sup.apply(this, arguments);
 				this._computedQueue && flushComputed(this);
-			};
-		}),
-		
-		/**
-			@private
-			@method
-		*/
-		lastKnownValue: inherit(function (sup) {
-			return function (path) {
-				return this.isComputed(path)? this._getComputedCache(path).value: sup.apply(this, arguments);
 			};
 		}),
 		

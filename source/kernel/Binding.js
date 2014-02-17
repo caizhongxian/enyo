@@ -255,7 +255,7 @@
 					, xformOwner = owner && owner.bindingTransformOwner;
 				
 				if (xform) {
-					if (isString(xform)) {
+					if (typeof xform == "string") {
 						if (xformOwner && xformOwner[xform]) {
 							xform = xformOwner[xform];
 						} else if (owner && owner[xform]) {

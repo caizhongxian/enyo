@@ -574,6 +574,10 @@
 					// the instance not another nested object this way
 					inst.isDirty = true;
 					changed = inst.changed || (inst.changed = {});
+					// @TODO: Need to come back to this whole scenario but for now it just ensures there
+					// won't be a failure in the update call but no real previous can exist for the properties
+					// that are changing on the relation
+					inst.previous || (inst.previous = {});
 					changed[key] = props;
 					if (!inst.isSilenced()) inst.emit("change", changed, inst);
 				}
@@ -595,7 +599,7 @@
 			@method
 		*/
 		getRelation: function (name) {
-			return where(this.relations, function (ln) {
+			return this.relations.find(function (ln) {
 				return ln instanceof Relation && ln.key == name;
 			});
 		},
@@ -641,30 +645,71 @@
 		}),
 		
 		/**
-			@private
+			@public
 			@method
 		*/
-		set: inherit(function (sup) {
-			return function (path, is, force) {
-				path || (path = "");
+		set: function (path, is, opts) {
+			if (!this.destroyed) {
+				var attrs = this.attributes
+					, prev = this.previous
+					, changed
+					, incoming
+					, force
+					, silent
+					, key
+					, value
+					, curr
+					, parts;
 				
-				if (isObject(path)) return sup.apply(this, arguments);
-				
-				var prop = path
-					, rel, parts;
-					
-				if (path.indexOf(".") >= 0) {
-					parts = path.split(".");
-					prop = parts.shift();
+				if (typeof path == "object") {
+					incoming = path;
+					opts || (opts = is);
+				} else {
+					incoming = {};
+					incoming[path] = is;
 				}
+			
+				if (opts === true) {
+					force = true;
+					opts = {};
+				}
+			
+				opts || (opts = {});
+				silent = opts.silent;
+				force = force || opts.force;
+			
+				for (key in incoming) {
+					value = incoming[key];
+					
+					if (key.indexOf(".") > 0) {
+						parts = key.split(".");
+						key = parts.shift();
+					}
+					
+					curr = attrs[key];
+					if (curr && curr instanceof Relation) {
+						if(parts) curr.getRelated().set(parts.join("."), value, opts);
+						else curr.setRelated(value, opts);
+						continue;
+					}
+					
+					if (value !== curr || force) {
+						prev || (prev = this.previous = {});
+						changed || (changed = this.changed = {});
+						// assign previous value for reference
+						prev[key] = curr;
+						changed[key] = attrs[key] = value;
+					}
+				}
+			
+				if (changed) {
+					// must flag this model as having been updated
+					this.isDirty = true;
 				
-				rel = this.isRelation(prop);
-				
-				return !rel? sup.apply(this, arguments):
-					parts? rel.getRelated().set(parts.join("."), is, force):
-					rel.setRelated(is);
-			};
-		}),
+					if (!silent && !this.isSilenced()) this.emit("change", changed, this);
+				}
+			}
+		},
 		
 		/**
 			@private
@@ -673,10 +718,10 @@
 		raw: function () {
 			var inc = this.includeKeys
 				, attrs = this.attributes
-				, keys = inc || oKeys(attrs)
+				, keys = inc || Object.keys(attrs)
 				, cpy = inc? only(inc, attrs): clone(attrs);
 				
-			forEach(keys, function (key) {
+			keys.forEach(function (key) {
 				var rel = this.isRelation(key)
 					, ent = rel? rel.getRelated(): this.get(key);
 				if (!rel) {
@@ -760,7 +805,7 @@
 		// quickly fetch the constructor for the relation once so all instances won't
 		// have to look it up later, only need to do this for the incoming props as
 		// it will have already been done for any existing relations from a base kind
-		props.relations.forEach(function (relation) {
+		props.relations && props.relations.forEach(function (relation) {
 			var type = relation.type;
 			
 			if (!(type === enyo.toMany) && !(type === enyo.toOne)) {

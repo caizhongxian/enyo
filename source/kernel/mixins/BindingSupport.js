@@ -1,7 +1,7 @@
 (function (enyo) {
 	
 	var inherit = enyo.inherit
-		, forEach = enyo.forEach
+		// , forEach = enyo.forEach
 		, toArray = enyo.toArray
 		, isString = enyo.isString
 		, mixin = enyo.mixin
@@ -48,7 +48,7 @@
 		*/
 		clearBindings: function (subset) {
 			var bindings = subset || (this.bindings && this.bindings.slice());
-			forEach(bindings, function (bnd) {
+			bindings.forEach(function (bnd) {
 				bnd.destroy();
 			});
 		},
@@ -69,7 +69,7 @@
 			return function () {
 				var bindings = this.bindings;
 				this._bindingSupportInitialized = true;
-				bindings && (this.bindings = []) && forEach(bindings, function (def) {
+				bindings && (this.bindings = []) && bindings.forEach(function (def) {
 					this.binding(def);
 				}, this);
 				sup.apply(this, arguments);
@@ -121,7 +121,7 @@
 		
 		sup.call(this, ctor, props);
 		if (props.bindings) {
-			forEach(props.bindings, function (bnd) {
+			props.bindings.forEach(function (bnd) {
 				defaults && mixin(bnd, defaults, flags);
 				bnd.kind || (bnd.kind = kind); 
 			});

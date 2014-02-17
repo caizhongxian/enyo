@@ -381,9 +381,9 @@ describe ("Observer", function () {
 			})
 			
 			it ("should be able to declare observers as an array", function () {
-				expect(ctor.prototype.kindObservers).to.exist;
-				expect(ctor.prototype.kindObservers).to.be.an("array");
-				expect(ctor.prototype.kindObservers).to.have.length(5);
+				expect(ctor.prototype._observers).to.exist;
+				expect(ctor.prototype._observers).to.be.an("array");
+				expect(ctor.prototype._observers).to.have.length(5);
 				expect(obj.observers()).to.be.an("array");
 				expect(obj.observers()).to.have.length(5);
 			});
@@ -393,7 +393,7 @@ describe ("Observer", function () {
 			});
 			
 			it ("should be able to declare multiple dependent properties in an array", function () {
-				var fn = obj.testObserver2;
+				var fn = "testObserver2";
 				expect(enyo.filter(obj.observers(), function (ln) {
 					return ln.method === fn;
 				})).to.have.length(3);
@@ -441,9 +441,9 @@ describe ("Observer", function () {
 			});
 			
 			it ("should be able to declare observers as an object literal", function () {
-				expect(ctor.prototype.kindObservers).to.exist;
-				expect(ctor.prototype.kindObservers).to.be.an("array");
-				expect(ctor.prototype.kindObservers).to.have.length(5);
+				expect(ctor.prototype._observers).to.exist;
+				expect(ctor.prototype._observers).to.be.an("array");
+				expect(ctor.prototype._observers).to.have.length(5);
 				expect(obj.observers()).to.be.an("array");
 				expect(obj.observers()).to.have.length(5);
 			});
@@ -453,7 +453,7 @@ describe ("Observer", function () {
 			});
 			
 			it ("should be able to declare multiple dependent properties in an array", function () {
-				var fn = obj.testObserver2;
+				var fn = "testObserver2";
 				expect(enyo.filter(obj.observers(), function (ln) {
 					return ln.method === fn;
 				})).to.have.length(3);

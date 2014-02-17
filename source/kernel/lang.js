@@ -320,7 +320,7 @@
 		if (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined) return path;
 		
 		var next = (this === enyo? enyo.global: this)
-			, parts, part, getter, prev, prevPart;
+			, parts, part, getter, prev;
 		
 		// obviously there is a severe penalty for requesting get with a path lead
 		// by unnecessary relative notation...
@@ -334,7 +334,6 @@
 		
 		do {
 			prev = next;
-			prevPart = part;
 			// for constructors we must check to make sure they are undeferred before
 			// looking for static properties
 			if (next.prototype) next = enyo.checkConstructor(next);
@@ -346,9 +345,7 @@
 			// and for regular cases
 			else next = next[part];
 		} while (next && (part = parts.shift()));
-		
-		if (prev._getCache) prev._getCache()[prevPart] = next;
-		
+				
 		// if necessary we ensure we've undeferred any constructor that we're
 		// retrieving here as a final property as well
 		return next && next.prototype? enyo.checkConstructor(next): next;
@@ -366,8 +363,6 @@
 		} else {
 			v = b[path];
 		}
-		
-		if (b._getCache) b._getCache()[path] = v;
 		
 		return (("function" == typeof v && enyo.checkConstructor(v)) || v);
 	};
@@ -390,7 +385,7 @@
 	*/
 	enyo.setPath = function (path, is, opts) {
 		// we're trying to catch only null/undefined not empty string or 0 cases
-		if (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined) return this;
+		if (!path || (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined)) return this;
 		
 		var next = (this === enyo? enyo.global: this)
 			, base = next
@@ -412,7 +407,7 @@
 		
 		do {
 			
-			if (!parts.length) was = /*next.get? next.get(part): next[part]*/ next.lastKnownValue? next.lastKnownValue(part): next[part];
+			if (!parts.length) was = next.get && next.get !== getPath? next.get(part): next[part];
 			else {
 				// this allows us to ensure that if we're setting a static property of a constructor we have the
 				// correct constructor
@@ -422,17 +417,12 @@
 				
 				if (next !== base && next.get) next = (next.get !== getPath? next.get(part): next[part]) || (next[part] = {});
 				else next = next[part] || (next[part] = {});
-				
-				// next = (next !== base && next.get? next.get(part): next[part]) || (next[part] = {});
 			}
 			
 		} while (parts.length && (part = parts.shift()));
 		
 		// now update to the new value
 		next[part] = is;
-		
-		// we look for the ability to update the cache of the object when possible
-		if (next._getCache) next._getCache()[part] = is;
 		
 		// if possible we notify the changes but this change is notified from the immediate
 		// parent not the root object (could be the same)
@@ -462,8 +452,6 @@
 		}
 		// set the new value now that we can
 		b[path] = value;
-		
-		if (b._getCache) b._getCache()[path] = value;
 		
 		// this method is only ever called from the context of enyo objects
 		// as a protected method
@@ -592,32 +580,16 @@
 		@method enyo.only
 	*/
 	enyo.only = function (properties, object, ignore) {
-		var ret = {};
-		var idx = 0;
-		var len;
-		var property;
-		// sanity check the properties array
-		if (!exists(properties) || !(properties instanceof Array)) {
-			return ret;
+		var ret = {}
+			, prop;
+		
+		for (var i=0, len=properties.length >>> 0; i<len; ++i) {
+			prop = properties[i];
+			
+			if (ignore && !object[prop]) continue;
+			ret[prop] = object[prop];
 		}
-		// sanity check the object
-		if (!exists(object) || "object" !== typeof object) {
-			return ret;
-		}
-		// reduce the properties array to just unique entries
-		properties = unique(properties);
-		// iterate over the properties given and if the property exists on
-		// the object copy its value to the return array
-		for (len = properties.length; idx < len; ++idx) {
-			property = properties[idx];
-			if (property in object) {
-				if (true === ignore && !object[property]) {
-					continue;
-				}
-				ret[property] = object[property];
-			}
-		}
-		// return the array of values we found for the given properties
+		
 		return ret;
 	};
 
@@ -1019,8 +991,9 @@
 	*/
 	enyo.pluck = function (array, prop) {
 		if (!(array instanceof Array)) {
+			var tmp = array;
 			array = prop;
-			prop = arguments[0];
+			prop = tmp;
 		}
 		
 		var ret = [];
@@ -1105,8 +1078,9 @@
 	*/
 	enyo.remove = function(array, el) {
 		if (!(array instanceof Array)) {
+			var tmp = array;
 			array = el;
-			el = arguments[0];
+			el = tmp;
 		}
 		
 		var i = array.indexOf(el);

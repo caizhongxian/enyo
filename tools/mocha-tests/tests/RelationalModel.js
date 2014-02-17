@@ -140,7 +140,6 @@ describe ("RelationalModel", function () {
 						key: "otherprop"
 					}]
 				});
-
 				model.set({id: 345, testprop: 10, otherprop: {id: 456}});
 				expect(model.raw()).to.eql({id: 345, testprop: 10});
 				model.destroy();

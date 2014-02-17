@@ -127,7 +127,7 @@ describe ("Model", function () {
 					};
 					expect(fn).to.throw("change");
 					expect(model.changed).to.exist.and.to.have.keys(["prop2", "prop3"]);
-					expect(model.previous).to.exist.and.to.have.keys(["prop2", "prop3"]);
+					expect(model.previous).to.exist.and.to.have.keys(["prop1", "prop2", "prop3"]);
 				});
 			});
 		});

@@ -1,9 +1,9 @@
 (function (enyo) {
 	
-	var forEach = enyo.forEach
-		, toArray = enyo.toArray
-		, findIndex = enyo.findIndex
-		, filter = enyo.filter
+	// var forEach = enyo.forEach
+	var toArray = enyo.toArray
+		// , findIndex = enyo.findIndex
+		// , filter = enyo.filter
 		, uid = enyo.uid
 		, eventTable = {};
 	
@@ -29,7 +29,7 @@
 			, idx;
 			
 		if (listeners.length) {
-			idx = findIndex(listeners, function (ln) {
+			idx = listeners.findIndex(function (ln) {
 				return ln.event == e && ln.method === fn && ctx? ln.ctx === ctx: true;
 			});
 			idx >= 0 && listeners.splice(idx, 1);
@@ -155,7 +155,7 @@
 			
 			if (loc) {
 				if (e) {
-					eventTable[euid] = filter(loc, function (ln) {
+					eventTable[euid] = loc.filter(function (ln) {
 						return ln.event != e;
 					});
 				} else {
@@ -174,7 +174,7 @@
 			var euid = this.euid || (this.euid = uid("e"))
 				, loc = eventTable[euid] || (eventTable[euid] = []);
 			
-			return !e? loc: filter(loc, function (ln) {
+			return !e? loc: loc.filter(function (ln) {
 				return ln.event == e || ln.event == "*";
 			});
 		},

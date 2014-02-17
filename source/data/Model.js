@@ -143,50 +143,51 @@
 			@method
 		*/
 		set: function (path, is, opts) {
-			
-			var attrs = this.attributes
-				, prev = this.previous
-				, changed
-				, incoming
-				, force
-				, silent
-				, key
-				, value;
+			if (!this.destroyed) {
+				var attrs = this.attributes
+					, prev = this.previous
+					, changed
+					, incoming
+					, force
+					, silent
+					, key
+					, value;
 				
-			if (typeof path == "object") {
-				incoming = path;
-				opts || (opts = is);
-			} else {
-				incoming = {};
-				incoming[path] = is;
-			}
-			
-			if (opts === true) {
-				force = true;
-				opts = {};
-			}
-			
-			opts || (opts = {});
-			silent = opts.silent;
-			force = force || opts.force;
-			
-			for (key in incoming) {
-				value = incoming[key];
-				
-				if (value !== attrs[key] || force) {
-					prev || (prev = this.previous = {});
-					changed || (changed = this.changed = {});
-					// assign previous value for reference
-					prev[key] = attrs[key];
-					changed[key] = attrs[key] = value;
+				if (typeof path == "object") {
+					incoming = path;
+					opts || (opts = is);
+				} else {
+					incoming = {};
+					incoming[path] = is;
 				}
-			}
 			
-			if (changed) {
-				// must flag this model as having been updated
-				this.isDirty = true;
+				if (opts === true) {
+					force = true;
+					opts = {};
+				}
+			
+				opts || (opts = {});
+				silent = opts.silent;
+				force = force || opts.force;
+			
+				for (key in incoming) {
+					value = incoming[key];
 				
-				if (!silent && !this.isSilenced()) this.emit("change", changed, this);
+					if (value !== attrs[key] || force) {
+						prev || (prev = this.previous = {});
+						changed || (changed = this.changed = {});
+						// assign previous value for reference
+						prev[key] = attrs[key];
+						changed[key] = attrs[key] = value;
+					}
+				}
+			
+				if (changed) {
+					// must flag this model as having been updated
+					this.isDirty = true;
+				
+					if (!silent && !this.isSilenced()) this.emit("change", changed, this);
+				}
 			}
 		},
 		
@@ -222,6 +223,7 @@
 			// ensure we have the updated attributes
 			this.attributes = this.attributes? this.defaults? mixin({}, [this.defaults, this.attributes]): clone(this.attributes): this.defaults? clone(this.defaults): {};
 			attrs && mixin(this.attributes, attrs);
+			this.previous = clone(this.attributes);
 			
 			// now we need to ensure we have a store and register with it
 			this.store = this.store || enyo.store;
