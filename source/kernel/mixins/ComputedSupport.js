@@ -4,15 +4,15 @@
 		// , isObject = enyo.isObject
 		, isArray = enyo.isArray
 		// , isFunction = enyo.isFunction
-		, where = enyo.where
+		// , where = enyo.where
 		, remove = enyo.remove
-		, forEach = enyo.forEach
-		, indexOf = enyo.indexOf
+		// , forEach = enyo.forEach
+		// , indexOf = enyo.indexOf
 		, clone = enyo.clone
-		, keys = enyo.keys
-		, map = enyo.map
+		// , keys = enyo.keys
+		// , map = enyo.map
 		, nar = enyo.nar
-		, filter = enyo.filter
+		// , filter = enyo.filter
 		, inherit = enyo.inherit
 		, extend = enyo.kind.statics.extend;
 		
@@ -47,7 +47,7 @@
 			, deps = obj._computedDependencies[path];
 			
 		if (deps) for (var i=0, dep; (dep=deps[i]); ++i) {
-			if (!queue.length || -1 == indexOf(dep, queue)) queue.push(dep);
+			if (!queue.length || -1 == queue.indexOf(dep)) queue.push(dep);
 		}
 	}
 	
@@ -190,9 +190,9 @@
 					for (name in props.computed) {
 						// points to the dependencies of the computed method
 						deps = props.computed[name];
-						conf = deps && where(deps, function (ln) {
+						conf = deps && deps.find(function (ln) {
 							// we deliberately remove the entry here and forcibly return true to break
-							return typeof ln == "object"? (remove(ln, deps) || true): false;
+							return typeof ln == "object"? (remove(deps, ln) || true): false;
 						});
 						// create a single entry now for the method/computed with all dependencies
 						tmp.push({method: name, path: deps, cached: conf? conf.cached: null});
@@ -213,7 +213,7 @@
 				computed[ln.method] = !! ln.cached;
 				// we must now look to add an entry for any given dependencies and map them
 				// back to the computed property they will trigger
-				if (isArray(ln.path)) forEach(ln.path, function (dep) { addDependency(dep, ln.method); });
+				if (isArray(ln.path)) ln.path.forEach(function (dep) { addDependency(dep, ln.method); });
 				else if (ln.path) addDependency(ln.path, ln.method);
 			}
 			

@@ -1,16 +1,16 @@
 (function (enyo) {
 	
 	var kind = enyo.kind
-		, forEach = enyo.forEach
-		, find = enyo.find
-		, findIndex = enyo.findIndex
-		, map = enyo.map
-		, filter = enyo.filter
+		// , forEach = enyo.forEach
+		// , find = enyo.find
+		// , findIndex = enyo.findIndex
+		// , map = enyo.map
+		// , filter = enyo.filter
 		, isArray = enyo.isArray
 		, isString = enyo.isString
-		, indexOf = enyo.indexOf
+		// , indexOf = enyo.indexOf
 		, clone = enyo.clone
-		, where = enyo.where
+		// , where = enyo.where
 		, exists = enyo.exists;
 		
 	/**
@@ -39,7 +39,7 @@
 				, euid, id;
 			
 			// loop through and do the work and ensure we still return the reference
-			if (isArray(model)) return forEach(model, function (ln) {
+			if (isArray(model)) return model.forEach(function (ln) {
 				this.add(ln, idx) && ++idx;
 			}, this) || this;
 			
@@ -70,13 +70,13 @@
 		*/
 		remove: function (model) {
 			// loop through and do the work and ensure we still return the reference
-			if (isArray(model)) return forEach(model, this.remove, this) || this;
+			if (isArray(model)) return model.forEach(this.remove, this) || this;
 			
 			var loc = this.idTable
 				, models = this._models
 				, euid = model.euid
 				, id = model.attributes[model.primaryKey]
-				, idx = indexOf(model, models);
+				, idx = models.indexOf(model);
 			
 			delete loc[euid];
 			if (!model.headless) {
@@ -124,7 +124,7 @@
 			@method
 		*/
 		indexOf: function (model, offset) {
-			return indexOf(model, this._models, offset);
+			return this._models.indexOf(model, offset);
 		},
 		
 		/**
@@ -140,7 +140,7 @@
 			@method
 		*/
 		forEach: function (fn, ctx) {
-			return forEach(this.slice(), fn, ctx || this);
+			return this._models.forEach(fn, ctx || this);
 		},
 		
 		/**
@@ -148,7 +148,7 @@
 			@method
 		*/
 		map: function (fn, ctx) {
-			return map(this.slice(), fn, ctx || this);
+			return this._models.map(fn, ctx || this);
 		},
 		
 		/**
@@ -156,7 +156,7 @@
 			@method
 		*/
 		filter: function (fn, ctx) {
-			return filter(this.slice(), fn, ctx || this);
+			return this._models.filter(fn, ctx || this);
 		},
 		
 		/**
@@ -164,7 +164,7 @@
 			@method
 		*/
 		find: function (fn, ctx) {
-			return find(this.slice(), fn, ctx || this);
+			return this._models.find(fn, ctx || this);
 		},
 		
 		/**
@@ -172,7 +172,7 @@
 			@method
 		*/
 		findIndex: function (fn, ctx) {
-			return findIndex(this.slice(), fn, ctx || this);
+			return this._models.findIndex(fn, ctx || this);
 		},
 		
 		/**
@@ -180,7 +180,7 @@
 			@method
 		*/
 		where: function (fn, ctx) {
-			return where(this.slice(), fn, ctx || this);
+			return this._models.find(fn, ctx || this);
 		},
 		
 		/**

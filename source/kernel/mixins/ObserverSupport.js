@@ -4,12 +4,12 @@
 		, isObject = enyo.isObject
 		, isArray = enyo.isArray
 		, isFunction = enyo.isFunction
-		, forEach = enyo.forEach
-		, map = enyo.map
+		// , forEach = enyo.forEach
+		// , map = enyo.map
 		, clone = enyo.clone
-		, keys = enyo.keys
-		, findIndex = enyo.findIndex
-		, filter = enyo.filter
+		// , keys = enyo.keys
+		// , findIndex = enyo.findIndex
+		// , filter = enyo.filter
 		, uid = enyo.uid
 		, inherit = enyo.inherit
 		, isInherited = enyo.isInherited
@@ -46,7 +46,7 @@
 			, idx, chain;
 		
 		if (observers.length) {
-			idx = findIndex(observers, function (ln) {
+			idx = observers.findIndex(function (ln) {
 				return ln.path == path && ln.method === fn;
 			});
 			idx > -1 && observers.splice(idx, 1);
@@ -164,7 +164,7 @@
 				this._observers? this._observers.slice(): []
 			));
 	
-			return !path? loc: filter(loc, function (ln) {
+			return !path? loc: loc.filter(function (ln) {
 				return ln.path == path;
 			});
 		},
@@ -223,7 +223,7 @@
 			
 			if (loc) {
 				if (path) {
-					observerTable[euid] = filter(loc, function (ln) {
+					observerTable[euid] = loc.filter(function (ln) {
 						return ln.path != path;
 					});
 				} else {
@@ -380,9 +380,9 @@
 			else observers.push({path: path, method: method});
 		};
 		
-		if (incoming) forEach(incoming, function (ln) {
+		if (incoming) incoming.forEach(function (ln) {
 			// first we determine if the path itself is an array of paths to observe
-			if (isArray(ln.path)) forEach(ln.path, function (en) { addObserverEntry(en, ln.method); });
+			if (isArray(ln.path)) ln.path.forEach(function (en) { addObserverEntry(en, ln.method); });
 			else addObserverEntry(ln.path, ln.method);
 		});
 		

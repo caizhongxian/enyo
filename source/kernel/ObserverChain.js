@@ -4,7 +4,7 @@
 		, inherit = enyo.inherit
 		, bind = enyo.bindSafely
 		// , isObject = enyo.isObject
-		, forEach = enyo.forEach;
+		// , forEach = enyo.forEach;
 		
 	var LinkedList = enyo.LinkedList
 		, LinkedListNode = enyo.LinkedListNode;

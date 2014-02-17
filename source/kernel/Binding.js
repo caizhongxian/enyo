@@ -3,7 +3,7 @@
 	var kind = enyo.kind
 		, mixin = enyo.mixin
 		, uid = enyo.uid
-		, where = enyo.where
+		// , where = enyo.where
 		// , isString = enyo.isString
 		// , isObject = enyo.isObject
 		, isFunction = enyo.isFunction
@@ -333,7 +333,7 @@
 		@method
 	*/
 	enyo.Binding.find = function (euid) {
-		return where(bindings, function (ln) {
+		return bindings.find(function (ln) {
 			return ln.euid == euid;
 		});
 	};
