@@ -17,8 +17,8 @@ describe ("Observer", function () {
 		
 			it ("should add an observer", function () {
 				obj.addObserver("testprop", function () {});
-				expect(obj.observers()).to.be.an("array");
-				expect(obj.observers()).to.have.length(1);
+				expect(obj.observers("testprop")).to.be.an("array");
+				expect(obj.observers("testprop")).to.have.length(1);
 			});
 			
 			it ("should use the correct context when provided", function () {
@@ -52,8 +52,8 @@ describe ("Observer", function () {
 			
 			it ("should add an observer", function () {
 				obj.observe("testprop", function () {});
-				expect(obj.observers()).to.be.an("array");
-				expect(obj.observers()).to.have.length(1);
+				expect(obj.observers("testprop")).to.be.an("array");
+				expect(obj.observers("testprop")).to.have.length(1);
 			});
 			
 			it ("should use the correct context when provided", function () {
@@ -84,9 +84,9 @@ describe ("Observer", function () {
 			it ("should remove an observer", function () {
 				var fn = function () {};
 				obj.observe("testprop", fn);
-				expect(obj.observers()).to.have.length(1);
+				expect(obj.observers("testprop")).to.have.length(1);
 				obj.removeObserver("testprop", fn);
-				expect(obj.observers()).to.be.empty;
+				expect(obj.observers("testprop")).to.be.empty;
 			});
 			
 			it ("should destroy a chain when its path is unobserved", function () {
@@ -115,9 +115,9 @@ describe ("Observer", function () {
 			it ("should remove an observer", function () {
 				var fn = function () {};
 				obj.observe("testprop", fn);
-				expect(obj.observers()).to.have.length(1);
+				expect(obj.observers("testprop")).to.have.length(1);
 				obj.unobserve("testprop", fn);
-				expect(obj.observers()).to.be.empty;
+				expect(obj.observers("testprop")).to.be.empty;
 			});
 			
 			it ("should destroy a chain when its path is unobserved", function () {
@@ -382,10 +382,8 @@ describe ("Observer", function () {
 			
 			it ("should be able to declare observers as an array", function () {
 				expect(ctor.prototype._observers).to.exist;
-				expect(ctor.prototype._observers).to.be.an("array");
-				expect(ctor.prototype._observers).to.have.length(5);
-				expect(obj.observers()).to.be.an("array");
-				expect(obj.observers()).to.have.length(5);
+				expect(ctor.prototype._observers).to.be.an("object");
+				expect(obj.observers()).to.be.an("object");
 			});
 			
 			it ("should be able to declare multiple dependent properties for the same observer method", function () {
@@ -393,10 +391,9 @@ describe ("Observer", function () {
 			});
 			
 			it ("should be able to declare multiple dependent properties in an array", function () {
-				var fn = "testObserver2";
-				expect(enyo.filter(obj.observers(), function (ln) {
-					return ln.method === fn;
-				})).to.have.length(3);
+				expect(obj.observers("testprop1").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+				expect(obj.observers("testprop3").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+				expect(obj.observers("testprop4").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
 			});
 			
 			it ("should respond properly to change notifications", function () {
@@ -442,10 +439,8 @@ describe ("Observer", function () {
 			
 			it ("should be able to declare observers as an object literal", function () {
 				expect(ctor.prototype._observers).to.exist;
-				expect(ctor.prototype._observers).to.be.an("array");
-				expect(ctor.prototype._observers).to.have.length(5);
-				expect(obj.observers()).to.be.an("array");
-				expect(obj.observers()).to.have.length(5);
+				expect(ctor.prototype._observers).to.be.an("object");
+				expect(obj.observers()).to.be.an("object");
 			});
 			
 			it ("should be able to declare the same dependent property for multiple observer methods", function () {
@@ -453,10 +448,9 @@ describe ("Observer", function () {
 			});
 			
 			it ("should be able to declare multiple dependent properties in an array", function () {
-				var fn = "testObserver2";
-				expect(enyo.filter(obj.observers(), function (ln) {
-					return ln.method === fn;
-				})).to.have.length(3);
+				expect(obj.observers("testprop1").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+				expect(obj.observers("testprop3").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+				expect(obj.observers("testprop4").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
 			});
 			
 			it ("should respond properly to change notifications", function () {

@@ -12,7 +12,7 @@
 		// , filter = enyo.filter
 		, uid = enyo.uid
 		, inherit = enyo.inherit
-		, isInherited = enyo.isInherited
+		// , isInherited = enyo.isInherited
 		, nop = enyo.nop
 		, observerTable = {};
 		
@@ -24,8 +24,9 @@
 	*/
 	function addObserver (path, fn, ctx, opts) {
 		
-		this.observers().push({
-			path: path,
+		var observers = this.observers();
+		
+		(observers[path] || (observers[path] = [])).push({
 			method: fn,
 			ctx: ctx || this
 		});
@@ -40,14 +41,14 @@
 	/**
 		@private
 	*/
-	function removeObserver (obj, path, fn) {
-		var observers = obj.observers()
+	function removeObserver (obj, path, fn, ctx) {
+		var observers = obj.observers(path)
 			, chains = obj.chains()
 			, idx, chain;
-		
-		if (observers.length) {
+			
+		if (observers && observers.length) {
 			idx = observers.findIndex(function (ln) {
-				return ln.path == path && ln.method === fn;
+				return ln.method === fn && (ctx? ln.ctx === ctx: true);
 			});
 			idx > -1 && observers.splice(idx, 1);
 		}
@@ -72,14 +73,12 @@
 			
 			var observers = obj.observers(path);
 			
-			if (observers.length) for (var i=0, ln; (ln=observers[i]); ++i) {
+			if (observers && observers.length) for (var i=0, ln; (ln=observers[i]); ++i) {
 				if (typeof ln.method == "string") obj[ln.method](was, is, path);
 				else ln.method.call(ln.ctx || obj, was, is, path);
 			}
 			
-		} else {
-			enqueue(obj, path, was, is);
-		}
+		} else enqueue(obj, path, was, is);
 		
 		return obj;
 	}
@@ -158,15 +157,10 @@
 				, loc;
 				
 			loc = observerTable[euid] || (observerTable[euid] = (
-				// @TODO: When there is an opportunity come back and modify how the observers
-				// are dereferenced later so we don't need to deep clone the array of existing
-				// ones
-				this._observers? this._observers.slice(): []
+				this._observers? clone(this._observers): {}
 			));
-	
-			return !path? loc: loc.filter(function (ln) {
-				return ln.path == path;
-			});
+			
+			return path? loc[path]: loc;
 		},
 		
 		/**
@@ -200,7 +194,7 @@
 			@public
 			@method
 		*/
-		removeObserver: function (path, fn) {
+		removeObserver: function (path, fn, ctx) {
 			return removeObserver(this, path, fn);
 		},
 		
@@ -209,8 +203,8 @@
 			@method
 			@alias removeObserver
 		*/
-		unobserve: function (path, fn) {
-			return removeObserver(this, path, fn);
+		unobserve: function (path, fn, ctx) {
+			return removeObserver(this, path, fn, ctx);
 		},
 		
 		/**
@@ -223,9 +217,7 @@
 			
 			if (loc) {
 				if (path) {
-					observerTable[euid] = loc.filter(function (ln) {
-						return ln.path != path;
-					});
+					loc[path] = null;
 				} else {
 					observerTable[euid] = null;
 				}
@@ -342,27 +334,24 @@
 		sup.call(this, ctor, props);
 		
 		if (props === ObserverSupport) return;
-		
+
 		var proto = ctor.prototype || ctor
-			, observers = proto._observers? proto._observers.slice(): []
+			, observers = proto._observers? clone(proto._observers): {}
 			, incoming = props.observers
-			, chains = proto._observerChains? proto._observerChains.slice(): null;
+			, chains;
 			
-		// if there are incoming observers we need to figure them out possibly modify them
-		// if they are declared in the older syntax/style
-		// @NOTE: For observers declared according to the original syntax from 2.3...ish
-		if (incoming) {
-			if (!isArray(incoming)) {
-				(function () {
-					var tmp = [], name, deps;
-					// the slow iteration of properties...
-					for (name in incoming) {
-						deps = incoming[name];
-						tmp.push({method: name, path: deps});
-					}
-					incoming = tmp;
-				}());
-			}
+		if (incoming && !isArray(incoming)) {
+			(function () {
+				var tmp = [], deps, name;
+				// here is the slow iteration over the properties...
+				for (name in props.observers) {
+					// points to the dependencies of the computed method
+					deps = props.observers[name];
+					// create a single entry now for the method/computed with all dependencies
+					tmp.push({method: name, path: deps});
+				}
+				incoming = tmp;
+			}());
 		}
 		
 		// this scan is required to figure out what auto-observers might be present
@@ -377,7 +366,9 @@
 			// we have to make sure that the path isn't a chain because if it is we add it
 			// to the chains instead
 			if (path.indexOf(".") > -1) (chains || (chains = [])).push({path: path, method: method});
-			else observers.push({path: path, method: method});
+			else {
+				(observers[path] || (observers[path] = [])).push({method: method});
+			}
 		};
 		
 		if (incoming) incoming.forEach(function (ln) {
