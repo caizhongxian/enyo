@@ -788,7 +788,7 @@
 		
 		if (!ret) {
 			ret = {};
-		} else if (isArray(ret)) {
+		} else if (ret instanceof Array) {
 			opts = src;
 			src = ret;
 			ret = {};
@@ -798,7 +798,7 @@
 			opts = mixinDefaults;
 		}
 
-		if (isArray(src)) {
+		if (src instanceof Array) {
 			for (var i=0, it; (it=src[i]); ++i) enyo.mixin(ret, it, opts);
 		} else {
 			for (var key in src) {
