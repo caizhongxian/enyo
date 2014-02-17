@@ -3,12 +3,12 @@
 	var kind = enyo.kind
 		, mixin = enyo.mixin
 		, clone = enyo.clone
-		, oKeys = enyo.keys
+		// , oKeys = enyo.keys
 		, only = enyo.only
 		, getPath = enyo.getPath
 		, isString = enyo.isString
 		, isObject = enyo.isObject
-		, forEach = enyo.forEach
+		// , forEach = enyo.forEach
 		, isFunction = enyo.isFunction
 		, uid = enyo.uid
 		, uuid = enyo.uuid
@@ -91,7 +91,7 @@
 		raw: function () {
 			var inc = this.includeKeys
 				, attrs = this.attributes
-				, keys = inc || oKeys(attrs)
+				, keys = inc || Object.keys(attrs)
 				, cpy = inc? only(inc, attrs): clone(attrs);
 			forEach(keys, function (key) {
 				var ent = this.get(key);

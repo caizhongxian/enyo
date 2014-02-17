@@ -6,11 +6,11 @@
 		, isObject = enyo.isObject
 		, isString = enyo.isString
 		, constructorForKind = enyo.constructorForKind
-		, forEach = enyo.forEach
-		, map = enyo.map
-		, where = enyo.where
-		, find = enyo.find
-		, filter = enyo.filter
+		// , forEach = enyo.forEach
+		// , map = enyo.map
+		// , where = enyo.where
+		// , find = enyo.find
+		// , filter = enyo.filter
 		, store = enyo.store
 		, uid = enyo.uid
 		, mixin = enyo.mixin

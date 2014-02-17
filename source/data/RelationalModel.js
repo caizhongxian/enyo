@@ -5,15 +5,15 @@
 		, isString = enyo.isString
 		, isFunction = enyo.isFunction
 		, isArray = enyo.isArray
-		, forEach = enyo.forEach
-		, where = enyo.where
+		// , forEach = enyo.forEach
+		// , where = enyo.where
 		, mixin = enyo.mixin
 		, inherit = enyo.inherit
 		, constructorForKind = enyo.constructorForKind
-		, find = enyo.find
-		, map = enyo.map
+		// , find = enyo.find
+		// , map = enyo.map
 		, exists = enyo.exists
-		, oKeys = enyo.keys
+		// , oKeys = enyo.keys
 		, only = enyo.only
 		, store = enyo.store
 		, getPath = enyo.getPath;
@@ -720,7 +720,7 @@
 		*/
 		destroy: inherit(function (sup) {
 			return function () {
-				forEach(this.relations, function (rel) { rel.destroy(); });
+				this.relations.forEach(function (rel) { rel.destroy(); });
 				sup.apply(this, arguments);
 				this.relations = null;
 			};
@@ -734,10 +734,10 @@
 			var rels = this.relations || (this.relations = []);
 			
 			if (rels.length) {
-				this.relations = map(rels, function (ln) {
+				this.relations = rels.map(function (ln) {
 					return new ln.type(this, ln);
 				}, this);
-				forEach(this.relations, function (ln) { ln.findRelated(); });
+				this.relations.forEach(function (ln) { ln.findRelated(); });
 			}
 		}
 
@@ -760,7 +760,7 @@
 		// quickly fetch the constructor for the relation once so all instances won't
 		// have to look it up later, only need to do this for the incoming props as
 		// it will have already been done for any existing relations from a base kind
-		forEach(props.relations, function (relation) {
+		props.relations.forEach(function (relation) {
 			var type = relation.type;
 			
 			if (!(type === enyo.toMany) && !(type === enyo.toOne)) {
