@@ -229,8 +229,7 @@
 			throw('enyo.bindSafely: scope["' + method + '"] is not a function (this="' + this + '")');
 		}
 	};
-
-
+	
 	/**
 		Calls method _inMethod_ on _inScope_ asynchronously.
 	
@@ -304,6 +303,174 @@
 			return perf.now();
 		};
 	}());
+
+	/**
+		A fast-path enabled global getter that takes a string path, which may be a
+		full path (from context window/Enyo) or a relative path (to the execution
+		context of the method). It knows how to check for and call the
+		backwards-compatible generated getters, as well as how to handle computed
+		properties. Returns _undefined_ if the object at the given path cannot be
+		found. May safely be called on non-existent paths.
+	
+		@public
+		@method enyo.getPath
+	*/
+	var getPath = enyo.getPath = function (path) {
+		// we're trying to catch only null/undefined not empty string or 0 cases
+		if (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined) return path;
+		
+		var next = (this === enyo? enyo.global: this)
+			, parts, part, getter, prev, prevPart;
+		
+		// obviously there is a severe penalty for requesting get with a path lead
+		// by unnecessary relative notation...
+		if (path[0] == ".") path = path.replace(/^\.+/, "");
+		
+		// here's where we check to make sure we have a truthy string-ish
+		if (!path) return;
+		
+		parts = path.split(".");
+		part = parts.shift();
+		
+		do {
+			prev = next;
+			prevPart = part;
+			// for constructors we must check to make sure they are undeferred before
+			// looking for static properties
+			if (next.prototype) next = enyo.checkConstructor(next);
+			// for the auto generated or provided published property support we have separate
+			// routines that must be called to preserve compatibility
+			if (next._getters && (getter = next._getters[part])) next = next[getter]();
+			// for all other special cases to ensure we use any overloaded getter methods
+			else if (next.get && next !== this && next.get !== getPath) next = next.get(part);
+			// and for regular cases
+			else next = next[part];
+		} while (next && (part = parts.shift()));
+		
+		if (prev._getCache) prev._getCache()[prevPart] = next;
+		
+		// if necessary we ensure we've undeferred any constructor that we're
+		// retrieving here as a final property as well
+		return next && next.prototype? enyo.checkConstructor(next): next;
+	};
+	
+	/**
+		@private
+		@method enyo.getPath.fast
+	*/
+	enyo.getPath.fast = function (path) {
+		// the current context
+		var b = this, fn, v;
+		if (b._getters && (fn = b._getters[path])) {
+			v = b[fn]();
+		} else {
+			v = b[path];
+		}
+		
+		if (b._getCache) b._getCache()[path] = v;
+		
+		return (("function" == typeof v && enyo.checkConstructor(v)) || v);
+	};
+
+	/**
+	
+		@TODO: Out of date...
+		A global setter that takes a string path (relative to the method's
+		execution context) or a full path (relative to window). Attempts
+		to automatically retrieve any previously existing value to supply
+		to any observers. If the context is an _enyo.Object_ or subkind,
+		the _notifyObservers()_ method is used to notify listeners for the path's
+		being set. If the previous value is equivalent to the newly set
+		value, observers will not be triggered by default. If the third
+		parameter is present and is an explicit boolean true, the observers
+		will be triggered regardless. Returns the context from which the method was executed.
+	
+		@public
+		@method enyo.setPath
+	*/
+	enyo.setPath = function (path, is, opts) {
+		// we're trying to catch only null/undefined not empty string or 0 cases
+		if (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined) return this;
+		
+		var next = (this === enyo? enyo.global: this)
+			, base = next
+			, parts, part, was, force;
+		
+		// for backwards compatibility
+		force = /*isObject(opts)*/ typeof opts == "object"? opts.force: opts;
+		opts || (opts = {});
+		
+		// obviously there is a severe penalty for requesting get with a path lead
+		// by unnecessary relative notation...
+		if (path[0] == ".") path = path.replace(/^\.+/, "");
+		
+		// here's where we check to make sure we have a truthy string-ish
+		if (!path) return next;
+		
+		parts = path.split(".");
+		part = parts.shift();
+		
+		do {
+			
+			if (!parts.length) was = /*next.get? next.get(part): next[part]*/ next.lastKnownValue? next.lastKnownValue(part): next[part];
+			else {
+				// this allows us to ensure that if we're setting a static property of a constructor we have the
+				// correct constructor
+				// @TODO: It seems ludicrous to have to check this on every single part of a chain; if we didn't have
+				// deferred constructors this wouldn't be necessary and is expensive - unnecessarily so when speed is so important
+				if (next.prototype) next = enyo.checkConstructor(next);
+				
+				if (next !== base && next.get) next = (next.get !== getPath? next.get(part): next[part]) || (next[part] = {});
+				else next = next[part] || (next[part] = {});
+				
+				// next = (next !== base && next.get? next.get(part): next[part]) || (next[part] = {});
+			}
+			
+		} while (parts.length && (part = parts.shift()));
+		
+		// now update to the new value
+		next[part] = is;
+		
+		// we look for the ability to update the cache of the object when possible
+		if (next._getCache) next._getCache()[part] = is;
+		
+		// if possible we notify the changes but this change is notified from the immediate
+		// parent not the root object (could be the same)
+		if (next.notify && !opts.silent && (force || was !== is || (opts.comparator && opts.comparator(was, is)))) next.notify(part, was, is);
+		// we will always return the original root-object of the call
+		return base;
+	};
+	
+	/**
+		@private
+		@method enyo.setPath.fast
+	*/
+	enyo.setPath.fast = function (path, value) {
+		// the current context
+		var b = this,
+			// the previous value and helper variable
+			rv, fn;
+		// we have to check and ensure that we're not setting a computed property
+		// and if we are, do nothing
+		if (b._computed && b._computed[path] !== undefined) {
+			return b;
+		}
+		if (b._getters && (fn=b._getters[path])) {
+			rv = b[fn]();
+		} else {
+			rv = b[path];
+		}
+		// set the new value now that we can
+		b[path] = value;
+		
+		if (b._getCache) b._getCache()[path] = value;
+		
+		// this method is only ever called from the context of enyo objects
+		// as a protected method
+		if (rv !== value) { b.notifyObservers(path, rv, value); }
+		// return the context
+		return b;
+	};
 	
 	// ----------------------------------
 	// String Functions
@@ -377,14 +544,7 @@
 	// Object Functions
 	// ----------------------------------
 	
-	
-	/**
-		Returns an array of all own enumerable properties found on _inObject_.
-	
-		@public
-		@method enyo.keys
-	*/
-	enyo.keys = Object.keys || function(inObject) {
+	Object.keys = Object.keys || function (obj) {
 		var results = [];
 		var hop = Object.prototype.hasOwnProperty;
 		for (var prop in inObject) {
@@ -410,6 +570,16 @@
 			}
 		}
 		return results;
+	};
+	
+	/**
+		Returns an array of all own enumerable properties found on _inObject_.
+	
+		@public
+		@method enyo.keys
+	*/
+	enyo.keys = function(obj) {
+		return Object.keys(obj);
 	};
 	
 	/**
@@ -778,7 +948,7 @@
 		@method enyo.indexOf
 	*/
 	enyo.indexOf = function(array, el, offset) {
-		if (!enyo.isArray(array)) return el.indexOf(array, offset);
+		if (!(array instanceof Array)) return el.indexOf(array, offset);
 		return array.indexOf(el, offset);
 	};
 	
@@ -786,7 +956,7 @@
 		ECMA 5.1 (ECMA-262) draft implementation of Array.prototype.lastIndexOf.
 	*/
 	enyo.lastIndexOf = function (array, el, offset) {
-		if (!enyo.isArray(array)) return el.lastIndexOf(array, offset);
+		if (!(array instanceof Array)) return el.lastIndexOf(array, offset);
 		return array.lastIndexOf(el, offset);
 	};
 	
@@ -848,9 +1018,9 @@
 		@method enyo.pluck
 	*/
 	enyo.pluck = function (array, prop) {
-		if (!enyo.isArray(array)) {
+		if (!(array instanceof Array)) {
 			array = prop;
-			prop = arguments[1];
+			prop = arguments[0];
 		}
 		
 		var ret = [];
@@ -928,5 +1098,20 @@
 		@alias enyo.cloneArray
 	*/
 	enyo.toArray = enyo.cloneArray;
+	
+	/**
+		@public
+		@method enyo.remove
+	*/
+	enyo.remove = function(array, el) {
+		if (!(array instanceof Array)) {
+			array = el;
+			el = arguments[0];
+		}
+		
+		var i = array.indexOf(el);
+		if (-1 < i) array.splice(i, 1);
+		return array;
+	};
 	
 })(enyo, this);
