@@ -5,9 +5,667 @@
 	*/
 	enyo.global = scope;
 	
+	/**
+		@private
+	*/
+	enyo.nop = function(){};
+	
+	/**
+		@private
+	*/
+	enyo.nob = {};
+	
+	/**
+		@private
+	*/
+	enyo.nar = [];
+	
+	/**
+		This name is reported in inspectors as the type of objects created via delegate,
+		otherwise we would just use enyo.nop
+	
+		@private
+	*/
+	enyo.instance = function() {};
+	
+	// some platforms need alternative syntax (e.g., when compiled as a v8 builtin)
+	if (!enyo.setPrototype) {
+		enyo.setPrototype = function(ctor, proto) {
+			ctor.prototype = proto;
+		};
+	}
+	
+	/**
+		Boodman/crockford delegation w/cornford optimization
+		
+		@private
+	*/
+	enyo.delegate = function(proto) {
+		enyo.setPrototype(enyo.instance, proto);
+		return new enyo.instance();
+	};
 	
 	// ----------------------------------
-	// ARRAY FUNCTIONS
+	// General Functions
+	// ----------------------------------
+	
+	/**
+		@public
+		@method enyo.exists
+	*/
+	enyo.exists = function (target) {
+		return (target !== undefined);
+	};
+	
+	var uidCounter = 0;
+	
+	/**
+		Creates a unique identifier (with an optional prefix) and returns
+		the identifier as a string.
+	
+		@public
+		@method enyo.uid
+	*/
+	enyo.uid = function (prefix) {
+		return String((prefix? prefix: "") + uidCounter++);
+	};
+	
+	/**
+		RFC4122 uuid generator for the browser.
+	
+		@public
+		@method enyo.uuid
+	*/
+	enyo.uuid = function () {
+		// @TODO: Could possibly be faster
+		var t, p = (
+			(Math.random().toString(16).substr(2,8)) + "-" +
+			((t=Math.random().toString(16).substr(2,8)).substr(0,4)) + "-" +
+			(t.substr(4,4)) +
+			((t=Math.random().toString(16).substr(2,8)).substr(0,4)) + "-" +
+			(t.substr(4,4)) +
+			(Math.random().toString(16).substr(2,8))
+		);
+		return p;
+	};
+	
+	/**
+		@public
+		@method enyo.irand
+	*/
+	enyo.irand = function(inBound) {
+		return Math.floor(Math.random() * inBound);
+	};
+	
+	var toString = Object.prototype.toString;
+
+	/**
+		@public
+		@method enyo.isString
+	*/
+	enyo.isString = function(it) {
+		return toString.call(it) === "[object String]";
+	};
+
+	/**
+		@public
+		@method enyo.isFunction
+	*/
+	enyo.isFunction = function(it) {
+		return toString.call(it) === "[object Function]";
+	};
+
+	/**
+		@public
+		@method enyo.isArray
+	*/
+	enyo.isArray = Array.isArray || function(it) {
+		return toString.call(it) === "[object Array]";
+	};
+
+	/**
+		@public
+		@method enyo.isObject
+	*/
+	enyo.isObject = Object.isObject || function (it) {
+		// explicit null/undefined check for IE8 compatibility
+		return (it != null) && (toString.call(it) === "[object Object]");
+	};
+
+	/**
+		@public
+		@method enyo.isTrue
+	*/
+	enyo.isTrue = function(it) {
+		return !(it === "false" || it === false || it === 0 || it === null || it === undefined);
+	};
+	
+	/**
+		Returns a function closure that will call (and return the value of)
+		function _method_, with _scope_ as _this_.
+
+		_method_ may be a function or the string name of a function-valued
+		property on _scope_.
+
+		Arguments to the closure are passed into the bound function.
+
+			// a function that binds this to this.foo
+			var fn = enyo.bind(this, "foo");
+			// the value of this.foo(3)
+			var value = fn(3);
+
+		Optionally, any number of arguments may be prefixed to the bound function.
+
+			// a function that binds this to this.bar, with arguments ("hello", 42)
+			var fn = enyo.bind(this, "bar", "hello", 42);
+			// the value of this.bar("hello", 42, "goodbye");
+			var value = fn("goodbye");
+
+		Functions may be bound to any scope.
+
+			// binds function 'bar' to scope 'foo'
+			var fn = enyo.bind(foo, bar);
+			// the value of bar.call(foo);
+			var value = fn();
+	
+		@public
+		@method enyo.bind
+	*/
+	enyo.bind = function(scope, method/*, bound arguments*/){
+		if (!method) {
+			method = scope;
+			scope = null;
+		}
+		scope = scope || enyo.global;
+		if (enyo.isString(method)) {
+			if (scope[method]) {
+				method = scope[method];
+			} else {
+				throw('enyo.bind: scope["' + method + '"] is null (scope="' + scope + '")');
+			}
+		}
+		if (enyo.isFunction(method)) {
+			var args = enyo.cloneArray(arguments, 2);
+			if (method.bind) {
+				return method.bind.apply(method, [scope].concat(args));
+			} else {
+				return function() {
+					var nargs = enyo.cloneArray(arguments);
+					// invoke with collected args
+					return method.apply(scope, args.concat(nargs));
+				};
+			}
+		} else {
+			throw('enyo.bind: scope["' + method + '"] is not a function (scope="' + scope + '")');
+		}
+	};
+	
+	/**
+		Binds a callback to a scope.  If the object has a "destroyed" property that's truthy,
+		then the callback will not be run if called.  This can be used to implement both
+		enyo.Object.bindSafely and for enyo.Object-like objects like enyo.Model and enyo.Collection.
+	
+		@public
+		@method enyo.bindSafely
+	*/
+	enyo.bindSafely = function(scope, method/*, bound arguments*/) {
+		if (enyo.isString(method)) {
+			if (scope[method]) {
+				method = scope[method];
+			} else {
+				throw('enyo.bindSafely: scope["' + method + '"] is null (this="' + this + '")');
+			}
+		}
+		if (enyo.isFunction(method)) {
+			var args = enyo.cloneArray(arguments, 2);
+			return function() {
+				if (scope.destroyed) {
+					return;
+				}
+				var nargs = enyo.cloneArray(arguments);
+				return method.apply(scope, args.concat(nargs));
+			};
+		} else {
+			throw('enyo.bindSafely: scope["' + method + '"] is not a function (this="' + this + '")');
+		}
+	};
+
+
+	/**
+		Calls method _inMethod_ on _inScope_ asynchronously.
+	
+		Uses _window.setTimeout_ with minimum delay, usually around 10ms.
+	
+		Additional arguments are passed to _inMethod_ when it is invoked.
+	
+		If only a single argument is supplied, will just call that
+		function asyncronously without doing any additional binding.
+	
+		@public
+		@method enyo.asyncMethod
+	*/
+	enyo.asyncMethod = function(inScope, inMethod/*, inArgs*/) {
+		if (!inMethod) {
+			// passed just a single argument
+			return setTimeout(inScope, 1);
+		} else {
+			return setTimeout(enyo.bind.apply(enyo, arguments), 1);
+		}
+	};
+
+	/**
+		Calls named method _inMethod_ (String) on _inObject_ with optional
+		arguments _inArguments_ (Array), if the object and method exist.
+
+			enyo.call(myWorkObject, "doWork", [3, "foo"]);
+	
+		@public
+		@method enyo.call
+	*/
+	enyo.call = function(inObject, inMethod, inArguments) {
+		var context = inObject || this;
+		if (inMethod) {
+			var fn = context[inMethod] || inMethod;
+			if (fn && fn.apply) {
+				return fn.apply(context, inArguments || []);
+			}
+		}
+	};
+
+	/**
+		Returns the current time.
+
+		The returned value is equivalent to _new Date().getTime()_.
+		
+		@public
+		@method enyo.now
+	*/
+	enyo.now = Date.now || function() {
+		return new Date().getTime();
+	};
+
+	/**
+		When window.performance is available, supply a high-precision, high performance
+		monotonic timestamp, which is independent of changes to the system clock and safer
+		for use in animation, etc.  Falls back to enyo.now (based on the JS _Date_ object),
+		which is subject to system time changes.
+	
+		@public
+		@method enyo.perfNow
+	*/
+	enyo.perfNow = (function () {
+		// we have to check whether or not the browser has supplied a valid
+		// method to use
+		var perf = window.performance || {};
+		// test against all known vendor-specific implementations, but use
+		// a fallback just in case
+		perf.now = perf.now || perf.mozNow || perf.msNow || perf.oNow || perf.webkitNow || enyo.now;
+		return function () {
+			return perf.now();
+		};
+	}());
+	
+	// ----------------------------------
+	// String Functions
+	// ----------------------------------
+	
+	/**
+		@public
+		@method enyo.toUpperCase
+	*/
+	enyo.toUpperCase = function(inString) {
+		return inString.toUpperCase();
+	};
+	
+	/**
+		@public
+		@method enyo.toLowerCase
+	*/
+	enyo.toLowerCase = function(inString) {
+		return inString.toLowerCase();
+	};
+	
+	/**
+		@public
+		@method enyo.cap
+	*/
+	enyo.cap = function(inString) {
+		return inString.slice(0, 1).toUpperCase() + inString.slice(1);
+	};
+
+	/**
+		@public
+		@method enyo.uncap
+	*/
+	enyo.uncap = function(inString) {
+		return inString.slice(0, 1).toLowerCase() + inString.slice(1);
+	};
+	
+	/**
+		@public
+		@method enyo.format
+	*/
+	enyo.format = function(inVarArgs) {
+		var pattern = /\%./g;
+		var arg = 0, template = inVarArgs, args = arguments;
+		var replacer = function(inCode) {
+			return args[++arg];
+		};
+		return template.replace(pattern, replacer);
+	};
+	
+	/**
+		@private
+	*/
+	String.prototype.trim = String.prototype.trim || function () {
+		return this.replace(/^\s+|\s+$/g, "");
+	};
+	
+	/**
+		Takes a string and trims leading and trailing spaces. If the string
+		has no length, is not a string, or is a falsy value, it will be returned
+		without modification.
+	
+		@public
+		@method enyo.trim
+	*/
+	enyo.trim = function (str) {
+		return (str && str.length && str.trim()) || "";
+	};
+	
+	// ----------------------------------
+	// Object Functions
+	// ----------------------------------
+	
+	
+	/**
+		Returns an array of all own enumerable properties found on _inObject_.
+	
+		@public
+		@method enyo.keys
+	*/
+	enyo.keys = Object.keys || function(inObject) {
+		var results = [];
+		var hop = Object.prototype.hasOwnProperty;
+		for (var prop in inObject) {
+			if (hop.call(inObject, prop)) {
+				results.push(prop);
+			}
+		}
+		// *sigh* IE 8
+		if (!({toString: null}).propertyIsEnumerable("toString")) {
+			var dontEnums = [
+				'toString',
+				'toLocaleString',
+				'valueOf',
+				'hasOwnProperty',
+				'isPrototypeOf',
+				'propertyIsEnumerable',
+				'constructor'
+			];
+			for (var i = 0, p; (p = dontEnums[i]); i++) {
+				if (hop.call(inObject, p)) {
+					results.push(p);
+				}
+			}
+		}
+		return results;
+	};
+	
+	/**
+		Convenience method that takes an array of properties and an object
+		as parameters. Returns a new object with just those properties named
+		in the array that are found to exist on the base object. If the third
+		parameter is true, falsy values will be ignored.
+	
+		@public
+		@method enyo.only
+	*/
+	enyo.only = function (properties, object, ignore) {
+		var ret = {};
+		var idx = 0;
+		var len;
+		var property;
+		// sanity check the properties array
+		if (!exists(properties) || !(properties instanceof Array)) {
+			return ret;
+		}
+		// sanity check the object
+		if (!exists(object) || "object" !== typeof object) {
+			return ret;
+		}
+		// reduce the properties array to just unique entries
+		properties = unique(properties);
+		// iterate over the properties given and if the property exists on
+		// the object copy its value to the return array
+		for (len = properties.length; idx < len; ++idx) {
+			property = properties[idx];
+			if (property in object) {
+				if (true === ignore && !object[property]) {
+					continue;
+				}
+				ret[property] = object[property];
+			}
+		}
+		// return the array of values we found for the given properties
+		return ret;
+	};
+
+	/**
+		Convenience method that takes two objects as parameters. For each key
+		from the first object, if the key also exists in the second object, a
+		mapping of the key from the first object to the key from the second
+		object is added to a result object, which is eventually returned. In
+		other words, the returned object maps the named properties of the
+		first object to the named properties of the second object. The optional
+		third parameter is a boolean designating whether to pass unknown key/value
+		pairs through to the new object. If true, those keys will exist on the
+		returned object.
+	
+		@public
+		@method enyo.remap
+	*/
+	enyo.remap = function (map, obj, pass) {
+		var ret = pass? enyo.clone(obj): {};
+		
+		for (var key in map) {
+			if (key in obj) ret[map[key]] = obj.get? obj.get(key): obj[key];
+		}
+		return ret;
+	};
+
+	/**
+		Convenience method that takes an array of properties and an object
+		as parameters. Returns a new object with all of the keys in the
+		object except those specified in the _properties_ array. The values
+		are shallow copies.
+	
+		@public
+		@method enyo.except
+	*/
+	enyo.except = function (properties, object) {
+		// the new object to return with just the requested keys
+		var ret = {};
+		var keep;
+		var idx = 0;
+		var len;
+		var key;
+		// sanity check the properties array
+		if (!exists(properties) || !(properties instanceof Array)) {
+			return ret;
+		}
+		// sanity check the object
+		if (!exists(object) || "object" !== typeof object) {
+			return ret;
+		}
+		// we want to only use the union of the properties and the
+		// available keys on the object
+		keep = union(properties, keys(object));
+		// for every property in the keep array now copy that to the new
+		// hash
+		for (len = keep.length; idx < len; ++idx) {
+			key = keep[idx];
+			// if the key was specified in the properties array but does not
+			// exist in the object ignore it
+			if (!(key in object)) {
+				continue;
+			}
+			ret[key] = object[key];
+		}
+		// return the new hash
+		return ret;
+	};
+
+	/**
+		Helper method that accepts an array of objects and returns
+		a hash of those objects indexed by the specified property. If a filter
+		is provided, it should accept four parameters: the key, the value
+		(object), the current mutable map reference, and an immutable
+		copy of the original array of objects for comparison.
+	
+		@public
+		@method enyo.indexBy
+	*/
+	enyo.indexBy = function (property, array, filter) {
+		// the return value - indexed map from the given array
+		var map = {};
+		var value;
+		var len;
+		var idx = 0;
+		// sanity check for the array with an efficient native array check
+		if (!exists(array) || !(array instanceof Array)) {
+			return map;
+		}
+		// sanity check the property as a string
+		if (!exists(property) || "string" !== typeof property) {
+			return map;
+		}
+		// the immutable copy of the array
+		var copy = enyo.clone(array);
+		// test to see if filter actually exsits
+		filter = exists(filter) && "function" === typeof filter? filter: undefined;
+		for (len = array.length; idx < len; ++idx) {
+			// grab the value from the array
+			value = array[idx];
+			// make sure that it exists and has the requested property at all
+			if (exists(value) && exists(value[property])) {
+				if (filter) {
+					// if there was a filter use it - it is responsible for
+					// updating the map accordingly
+					filter(property, value, map, copy);
+				} else {
+					// use the default behavior - check to see if the key
+					// already exists on the map it will be overwritten
+					map[value[property]] = value;
+				}
+			}
+		}
+		// go ahead and return our modified map
+		return map;
+	};
+	
+	/**
+		Shallow-clones an object or an array.
+		
+		@public
+		@method enyo.clone
+	*/
+	enyo.clone = function(obj) {
+		return enyo.isArray(obj) ? enyo.cloneArray(obj) : enyo.mixin({}, obj);
+	};
+	
+	var empty = {};
+	var mixinDefaults = {
+		exists: false,
+		ignore: false,
+		filter: null
+	};
+
+	/**
+		Will take a variety of options to ultimately mix a set of properties
+		from objects into single object. All configurations accept a boolean as
+		the final parameter to indicate whether or not to ignore _truthy_/_existing_
+		values on any _objects_ prior.
+
+		If _target_ exists and is an object, it will be the base for all properties
+		and the returned value. If the parameter is used but is _falsy_, a new
+		object will be created and returned. If no such parameter exists, the first
+		parameter must be an array of objects and a new object will be created as
+		the _target_.
+
+		The _source_ parameter may be an object or an array of objects. If no
+		_target_ parameter is provided, _source_ must be an array of objects.
+
+		The _options_ parameter allows you to set the _ignore_ and/or _exists_ flags
+		such that if _ignore_ is true, it will not override any truthy values in the
+		target, and if _exists_ is true, it will only use truthy values from any of
+		the sources. You may optionally add a _filter_ method-option that returns a
+		true or false value to indicate whether the value should be used. It receives
+		parameters in this order: _property_, _source value_, _source values_,
+		_target_, _options_. Note that modifying the target in the filter method can
+		have unexpected results.
+
+		Setting _options_ to true will set all options to true.
+	
+		@public
+		@method enyo.mixin
+	*/
+	enyo.mixin = function () {
+		var ret = arguments[0]
+			, src = arguments[1]
+			, opts = arguments[2]
+			, val;
+		
+		if (!ret) {
+			ret = {};
+		} else if (isArray(ret)) {
+			opts = src;
+			src = ret;
+			ret = {};
+		}
+		
+		if (!opts || opts === true) {
+			opts = mixinDefaults;
+		}
+
+		if (isArray(src)) {
+			for (var i=0, it; (it=src[i]); ++i) enyo.mixin(ret, it, opts);
+		} else {
+			for (var key in src) {
+				val = src[key];
+				
+				// quickly ensure the property isn't a default
+				if (empty[key] !== val) {
+					if (
+						(!opts.exists || val) &&
+						(!opts.ignore || !ret[key]) &&
+						(opts.filter? opts.filter(key, val, src, ret, opts): true)
+					) {
+						ret[key] = val;
+					}
+				}
+			}
+		}
+		
+		return ret;
+	};
+	
+	/**
+		Returns an array of the values of all properties in an object.
+	
+		@public
+		@method enyo.values
+	*/
+	enyo.values = function (obj) {
+		var ret = [];
+		for (var key in obj) {
+			if (obj.hasOwnProperty(key)) ret.push(obj[key]);
+		}
+		return ret;
+	};
+	
+	// ----------------------------------
+	// Array Functions
 	// ----------------------------------
 	
 	/**
@@ -153,6 +811,13 @@
 	};
 	
 	/**
+		@public
+		@method enyo.where
+		@alias enyo.find
+	*/
+	enyo.where = enyo.find;
+	
+	/**
 		ECMA 5.1 (ECMA-262) draft implementation of Array.prototype.forEach.
 	
 		@public
@@ -197,13 +862,71 @@
 	
 	/**
 		@public
+		@method enyo.merge
+	*/
+	enyo.merge = function () {
+		var ret = []
+			, values = Array.prototype.concat.apply([], arguments);
+		for (var i=0, len=values.length >>> 0; i<len; ++i) {
+			if (!ret.length || -1 < ret.indexOf(values[i])) ret.push(values[i]);
+		}
+		return ret;
+	};
+	
+	/**
+		@public
 		@method enyo.union
 	*/
 	enyo.union = function () {
-		var ret = [];
-		for (var i=0, len=arguments.length; i<len; ++i) {
-			
+		var ret = []
+			, values = Array.prototype.concat.apply([], arguments)
+			, seen = []
+			, value;
+		for (var i=0, len=values.length >>> 0; i<len; ++i) {
+			value = values[i];
+			if (!seen.length || -1 < seen.indexOf(value)) {
+				seen.push(value);
+				if (i == values.lastIndexOf(value)) ret.push(value);
+			}
 		}
+		return ret;
 	};
+	
+	/**
+		@public
+		@method enyo.unique
+		@alias enyo.union
+	*/
+	enyo.unique = enyo.union;
+	
+	/**
+		Clones an existing Array, or converts an array-like object into an Array.
+
+		If _inOffset_ is non-zero, the cloning starts from that index in the source Array.
+		The clone may be appended to an existing Array by passing the existing Array as _inStartWith_.
+
+		Array-like objects have _length_ properties, and support square-bracket notation ([]).
+		Often, array-like objects do not support Array methods, such as _push_ or _concat_, and
+		so must be converted to Arrays before use.
+
+		The special _arguments_ variable is an example of an array-like object.
+	
+		@public
+		@method enyo.cloneArray
+	*/
+	enyo.cloneArray = function(inArrayLike, inOffset, inStartWith) {
+		var arr = inStartWith || [];
+		for(var i = inOffset || 0, l = inArrayLike.length; i<l; i++){
+			arr.push(inArrayLike[i]);
+		}
+		return arr;
+	};
+	
+	/**
+		@public
+		@method enyo.toArray
+		@alias enyo.cloneArray
+	*/
+	enyo.toArray = enyo.cloneArray;
 	
 })(enyo, this);
