@@ -168,8 +168,16 @@
 			
 			if (!parts.length) was = /*next.get? next.get(part): next[part]*/ next.lastKnownValue? next.lastKnownValue(part): next[part];
 			else {
+				// this allows us to ensure that if we're setting a static property of a constructor we have the
+				// correct constructor
+				// @TODO: It seems ludicrous to have to check this on every single part of a chain; if we didn't have
+				// deferred constructors this wouldn't be necessary and is expensive - unnecessarily so when speed is so important
 				if (next.prototype) next = enyo.checkConstructor(next);
-				next = (next !== base && next.get? next.get(part): next[part]) || (next[part] = {});
+				
+				if (next !== base && next.get) next = (next.get !== getPath? next.get(part): next[part]) || (next[part] = {});
+				else next = next[part] || (next[part] = {});
+				
+				// next = (next !== base && next.get? next.get(part): next[part]) || (next[part] = {});
 			}
 			
 		} while (parts.length && (part = parts.shift()));
