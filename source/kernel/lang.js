@@ -97,7 +97,12 @@
 			// routines that must be called to preserve compatibility
 			if (next._getters && (getter = next._getters[part])) next = next[getter]();
 			// for all other special cases to ensure we use any overloaded getter methods
-			else if (next.get && next !== this) next = next.get(part);
+			else if (next.get && next !== this) {
+				// only if the get method has been overloaded do we actually call it
+				// recursively
+				if (next.get !== getPath) next = next.get(part);
+				else next = next[part];
+			}
 			// and for regular cases
 			else next = next[part];
 		} while (next && (part = parts.shift()));

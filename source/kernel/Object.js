@@ -124,9 +124,10 @@ enyo.kind({
 		(Moving forward, however, Enyo code should use computed properties
 		instead of relying on the getter naming convention.)
 	*/
-	get: function (path) {
-		return enyo.getPath.apply(this, arguments);
-	},
+	// get: function (path) {
+	// 	return enyo.getPath.apply(this, arguments);
+	// },
+	get: enyo.getPath,
 	//*@public
 	/**
 		Sets the value of a property (or path). Pass in the property (or path)
@@ -146,9 +147,10 @@ enyo.kind({
 		should use computed properties or observers instead of relying on the
 		setter naming convention.)
 	*/
-	set: function (path, value, force) {
-		return enyo.setPath.apply(this, arguments);
-	},
+	// set: function (path, value, force) {
+	// 	return enyo.setPath.apply(this, arguments);
+	// },
+	set: enyo.setPath,
 	
 	
 	/**
