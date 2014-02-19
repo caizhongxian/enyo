@@ -62,7 +62,7 @@
 			var loc = this.models
 				, len = this.length
 				, ctor = this.model
-				, options = {merge: true, silent: false, purge: false, parse: false, create: true, find: true}
+				, options = {merge: true, silent: false, purge: false, parse: false, create: true, find: true, sort: true}
 				, pkey = ctor.prototype.primaryKey
 				, idx = len
 				, added, keep, removed, model, attrs, found, id;
@@ -82,8 +82,11 @@
 				, silent = opts.silent
 				, parse = opts.parse
 				, find = opts.find
+				, sort = opts.sort
 				, create = opts.create !== false;
-				
+			
+			sort && !(typeof sort == "function") && (sort = this.comparator);
+			
 			// for a special case purge to remove records that aren't in the current
 			// set being added
 				
@@ -119,9 +122,7 @@
 					// dataset and aren't being created
 					if (purge) {
 						keep || (keep = {length: 0});
-						// we simply need the euid the value doesn't matter and null is fastest
-						// assignment
-						keep[found.euid] = null;
+						keep[found.euid] = model;
 						keep.length++;
 					}
 				} else if (attrs && find && (found = this.store.has(ctor, id))) {
@@ -157,7 +158,7 @@
 			}
 			
 			added && loc.add(added, idx);
-			
+			added && sort && this.sort(sort, {silent: true});
 			this.length = loc.length;
 			
 			if (!silent) {
@@ -312,9 +313,15 @@
 			@public
 			@method
 		*/
-		sort: function (fn) {
-			this.models.sort(fn || this.comparator);
-			this.emit("sort", fn || this.comparator);
+		sort: function (fn, opts) {
+			if (fn || this.comparator) {
+				var options = {silent: false}, silent;
+			
+				opts = opts? mixin({}, [options, opts]): options;
+				silent = opts.silent;
+				this.models.sort(fn || this.comparator);
+				!silent && !this.isSilenced() && this.emit("sort", {comparator: fn || this.comparator, models: this.models.slice()});
+			}
 			return this;
 		},
 		
@@ -322,7 +329,7 @@
 			@public
 			@method
 		*/
-		comparator: function () {},
+		comparator: null,
 		
 		/**
 			@private
@@ -330,13 +337,13 @@
 		*/
 		prepareModel: function (attrs, opts) {
 			var ctor = this.model
-				, options = {owner: this, silent: true}
+				, options = {silent: true}
 				, model;
 			
 			opts = opts? mixin({}, [options, opts]): options;
 			
 			attrs instanceof ctor && (model = attrs);
-			if (!model) model = new ctor(attrs, opts);
+			if (!model) model = new ctor(attrs, null, opts);
 			
 			model.on("*", this.onModelEvent, this);
 			
@@ -371,7 +378,7 @@
 				props = recs && !isArray(recs)? recs: props;
 				if (props === recs) recs = null;
 				// initialize our core records
-				this.models = new ModelList();
+				this.models = this.models || new ModelList();
 				
 				if (props && props.records) {
 					recs = recs? recs.concat(props.records): props.records.slice();
@@ -383,9 +390,9 @@
 				
 				sup.call(this, props);
 				
-				recs && recs.length && this.add(recs, opts);
-				this.store = this.store || store;
 				isString(this.model) && (this.model = constructorForKind(this.model));
+				this.store = this.store || store;
+				recs && recs.length && this.add(recs, opts);
 			};
 		})
 	});

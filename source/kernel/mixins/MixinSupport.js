@@ -13,7 +13,7 @@
 		@private
 	*/
 	function apply (proto, props) {
-		var applied = proto._mixins || (proto._mixins = [])
+		var applied = proto._mixins? (proto._mixins = proto._mixins.slice()): (proto._mixins = [])
 			, name = isString(props)? props: props.name
 			, idx = indexOf(name, applied);
 			

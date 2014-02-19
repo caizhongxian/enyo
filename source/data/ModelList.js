@@ -6,8 +6,8 @@
 		// , findIndex = enyo.findIndex
 		// , map = enyo.map
 		// , filter = enyo.filter
-		, isArray = enyo.isArray
-		, isString = enyo.isString
+		// , isArray = enyo.isArray
+		// , isString = enyo.isString
 		// , indexOf = enyo.indexOf
 		, clone = enyo.clone
 		// , where = enyo.where
@@ -39,7 +39,7 @@
 				, euid, id;
 			
 			// loop through and do the work and ensure we still return the reference
-			if (isArray(model)) return model.forEach(function (ln) {
+			if (model instanceof Array) return model.forEach(function (ln) {
 				this.add(ln, idx) && ++idx;
 			}, this) || this;
 			
@@ -50,7 +50,7 @@
 			
 			// @TODO: Absolutely must come back to this as this does not seem to be the
 			// best solution to this issue...
-			if (exists(id)) {
+			if (exists(id) && loc[id]) {
 				if (loc[id]) model.headless = true;
 				else loc[id] = model;
 			}
@@ -70,7 +70,7 @@
 		*/
 		remove: function (model) {
 			// loop through and do the work and ensure we still return the reference
-			if (isArray(model)) return model.forEach(this.remove, this) || this;
+			if (model instanceof Array) return model.forEach(this.remove, this) || this;
 			
 			var loc = this.idTable
 				, models = this._models
@@ -103,7 +103,7 @@
 			if (model === undefined) return;
 			
 			var loc = this.idTable
-				, str = isString(model) || !isNaN(model)
+				, str = (typeof model == "string") || !isNaN(model)
 				, euid = !str && model.euid
 				, id = !str && model.attributes[model.primaryKey]
 				, model = str? loc[model]: (loc[euid] || loc[id]);

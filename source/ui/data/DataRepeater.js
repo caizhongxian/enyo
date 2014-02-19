@@ -192,7 +192,7 @@ enyo.kind({
 		}
 	},
 	handlers: {onSelected: "childSelected", onDeselected: "childDeselected"},
-	_handlers: {add: "modelsAdded", remove: "modelsRemoved", reset: "refresh", sort: "refresh"},
+	_handlers: {add: "modelsAdded", remove: "modelsRemoved", reset: "refresh", sort: "refresh", filter: "refresh"},
 	collectionChanged: function (p) {
 		var c = this.collection;
 		if (typeof c == "string") {

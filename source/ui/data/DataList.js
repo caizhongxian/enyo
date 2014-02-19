@@ -93,7 +93,7 @@ enyo.kind({
 		dataset. This is much cheaper to call than _reset()_, but is primarily used
 		internally.
 	*/
-	refresh: function () {
+	refresh: function (c, e) {
 		if (this.get("absoluteShowing")) {
 			if (this.hasRendered) {
 				this.delegate.refresh(this);
