@@ -28,6 +28,14 @@
 		history: true,
 		
 		/**
+			@public
+		*/
+		options: {
+			// @TODO: Left off here...persisting to an underlying collection when necessary
+			persist: false
+		},
+		
+		/**
 			@private
 		*/
 		observers: [
@@ -136,11 +144,9 @@
 				if (typeof is == "string") this.collection = is = getPath(is);
 				if (!is || !(is instanceof Collection)) return;
 				is.on("*", this.onCollectionEvent, this);
-				this.reset({models: is.models.clone()});
+				this.reset({models: is.models.clone(), filter: true});
 			}
-			if (was) {
-				was.off("*", this.onCollectionEvent, this);
-			}
+			if (was) was.off("*", this.onCollectionEvent, this);
 		},
 		
 		/**

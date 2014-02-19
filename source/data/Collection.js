@@ -150,8 +150,9 @@
 			// here we process those models to be removed if purge was true
 			// the other guard is just in case we actually get to keep everything
 			// so we don't do this unnecessary pass
-			if (purge && keep && keep.length < len) {
+			if (purge && ((keep && keep.length < len) || models.length === 0)) {
 				removed || (removed = []);
+				keep || (keep = {});
 				for (i=0; i<len; ++i) !keep[(model = loc.at(i)).euid] && removed.push(model);
 				// if we removed any we process that now
 				removed.length && this.remove(removed, options);

@@ -1,16 +1,7 @@
 (function (enyo) {
 	
 	var kind = enyo.kind
-		// , forEach = enyo.forEach
-		// , find = enyo.find
-		// , findIndex = enyo.findIndex
-		// , map = enyo.map
-		// , filter = enyo.filter
-		// , isArray = enyo.isArray
-		// , isString = enyo.isString
-		// , indexOf = enyo.indexOf
 		, clone = enyo.clone
-		// , where = enyo.where
 		, exists = enyo.exists;
 		
 	/**
