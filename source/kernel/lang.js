@@ -383,7 +383,7 @@
 		@public
 		@method enyo.setPath
 	*/
-	enyo.setPath = function (path, is, opts) {
+	var setPath = enyo.setPath = function (path, is, opts) {
 		// we're trying to catch only null/undefined not empty string or 0 cases
 		if (!path || (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined)) return this;
 		
@@ -423,7 +423,11 @@
 				// @TODO: It seems ludicrous to have to check this on every single part of a chain; if we didn't have
 				// deferred constructors this wouldn't be necessary and is expensive - unnecessarily so when speed is so important
 				if (next.prototype) next = enyo.checkConstructor(next);
-				
+				if (next !== base && next.set && next.set !== setPath) {
+					parts.unshift(part);
+					next.set(parts.join("."), is, opts);
+					return base;
+				}
 				if (next !== base && next.get) next = (next.get !== getPath? next.get(part): next[part]) || (create && (next[part] = {}));
 				else next = next[part] || (create && (next[part] = {}));
 			}
@@ -433,7 +437,10 @@
 		if (!next) return base;
 		
 		// now update to the new value
-		next[part] = is;
+		if (next !== base && next.set && next.set !== setPath) {
+			next.set(part, is, opts);
+			return base;
+		} else next[part] = is;
 		
 		// if possible we notify the changes but this change is notified from the immediate
 		// parent not the root object (could be the same)
