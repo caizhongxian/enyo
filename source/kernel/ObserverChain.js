@@ -213,7 +213,7 @@
 			// that we don't see double notifications
 			// @TODO: Only notify if it was the full property path? This is far more efficient after
 			// testing but not as flexible...
-			node === this.tail && was !== is && this.object.notify(this.buildPath(node), was, is);
+			node === this.tail /*&& was !== is*/ && this.object.notify(this.buildPath(node), was, is);
 			// @TODO: It seems the same case across the board that the rebuild only needs to take place
 			// from the beginning to the second-to-last elem
 			node !== this.tail && was !== is && this.rebuild(node);

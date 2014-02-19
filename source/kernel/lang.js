@@ -388,12 +388,21 @@
 		if (!path || (!path && /*!enyo.exists(path)*/ path !== null && path !== undefined)) return this;
 		
 		var next = (this === enyo? enyo.global: this)
+			, options = {create: true, silent: false, force: false}
 			, base = next
-			, parts, part, was, force;
+			, parts, part, was, force, create, silent, comparator;
 		
-		// for backwards compatibility
-		force = /*isObject(opts)*/ typeof opts == "object"? opts.force: opts;
-		opts || (opts = {});
+		if (typeof opts == "object") opts = enyo.mixin({}, [options, opts]);
+		else {
+			force = opts;
+			opts = options;
+		}
+		
+		if (opts.force) force = true;
+		silent = opts.silent;
+		create = opts.create;
+		comparator = opts.comparator;
+		
 		
 		// obviously there is a severe penalty for requesting get with a path lead
 		// by unnecessary relative notation...
@@ -415,18 +424,20 @@
 				// deferred constructors this wouldn't be necessary and is expensive - unnecessarily so when speed is so important
 				if (next.prototype) next = enyo.checkConstructor(next);
 				
-				if (next !== base && next.get) next = (next.get !== getPath? next.get(part): next[part]) || (next[part] = {});
-				else next = next[part] || (next[part] = {});
+				if (next !== base && next.get) next = (next.get !== getPath? next.get(part): next[part]) || (create && (next[part] = {}));
+				else next = next[part] || (create && (next[part] = {}));
 			}
 			
-		} while (parts.length && (part = parts.shift()));
+		} while (next && parts.length && (part = parts.shift()));
+		
+		if (!next) return base;
 		
 		// now update to the new value
 		next[part] = is;
 		
 		// if possible we notify the changes but this change is notified from the immediate
 		// parent not the root object (could be the same)
-		if (next.notify && !opts.silent && (force || was !== is || (opts.comparator && opts.comparator(was, is)))) next.notify(part, was, is);
+		if (next.notify && !silent && (force || was !== is || (comparator && comparator(was, is)))) next.notify(part, was, is);
 		// we will always return the original root-object of the call
 		return base;
 	};

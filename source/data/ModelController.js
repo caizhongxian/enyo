@@ -104,6 +104,8 @@
 					this.notify(key, was && was.get(key), is && is.get(key));
 				}
 			}
+			
+			this.emit("model", {was: was, is: is});
 		},
 		
 		/**
@@ -140,21 +142,16 @@
 		*/
 		observe: inherit(function (sup) {
 			return function (path) {
-				if (path.indexOf(".") == -1 && !this.hasOwnProperty(path) && !this.isComputed(path)) this.modelObservedProperties()[path] = null;
+				var part = path
+					, parts;
+				
+				if (path.indexOf(".") > -1) {
+					parts = path.split(".");
+					part = parts.shift();
+				}
+				
+				if (!this.hasOwnProperty(part) && !this.isComputed(part)) this.modelObservedProperties()[path] = null;
 				return sup.apply(this, arguments);
-			};
-		}),
-		
-		/**
-			@private
-			@method
-		*/
-		unobserve: inherit(function (sup) {
-			return function (path) {
-				var ret = sup.apply(this, arguments)
-					, props = this.modelObservedProperties();
-				if (props[path] === null && !this.observers(path).length) delete props[path];
-				return ret; 
 			};
 		}),
 		
@@ -170,9 +167,9 @@
 			@private
 			@method
 		*/
-		removeObserver: function () {
-			return this.unobserve.apply(this, arguments);
-		},
+		// removeObserver: function () {
+		// 	return this.unobserve.apply(this, arguments);
+		// },
 		
 		/**
 			@private

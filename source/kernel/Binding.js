@@ -224,16 +224,16 @@
 				case DIRTY_TO:
 					val = target.get(to);
 					xform && (val = xform(val, DIRTY_TO, this));
-					!this._stop && source.set(from, val);
+					!this._stop && source.set(from, val, {create: false});
 					break;
 				case DIRTY_FROM:
 					
 				// @TODO: This should never need to happen but is here just in case
 				// it is ever arbitrarily called not having been dirty?
-				default:
+				// default:
 					val = source.get(from);
 					xform && (val = xform(val, DIRTY_FROM, this));
-					!this._stop && target.set(to, val);
+					!this._stop && target.set(to, val, {create: false});
 					break;
 				}
 				this.dirty = null;

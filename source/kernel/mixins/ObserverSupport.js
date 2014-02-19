@@ -157,7 +157,11 @@
 				, loc;
 				
 			loc = observerTable[euid] || (observerTable[euid] = (
-				this._observers? clone(this._observers): {}
+				this._observers? (function (obs) {
+					var cpy = {};
+					for (var key in obs) cpy[key] = obs[key].slice();
+					return cpy;
+				}(this._observers)): {}
 			));
 			
 			return path? loc[path]: loc;
