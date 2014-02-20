@@ -6,11 +6,6 @@
 		, isObject = enyo.isObject
 		, isString = enyo.isString
 		, constructorForKind = enyo.constructorForKind
-		// , forEach = enyo.forEach
-		// , map = enyo.map
-		// , where = enyo.where
-		// , find = enyo.find
-		// , filter = enyo.filter
 		, store = enyo.store
 		, uid = enyo.uid
 		, mixin = enyo.mixin
@@ -91,7 +86,7 @@
 			// set being added
 				
 			// we treat all additions as an array of additions
-			!isArray(models) && (models = [models]);
+			!(models instanceof Array) && (models = [models]);
 			
 			for (var i=0, end=models.length; i<end; ++i) {
 				model = models[i];

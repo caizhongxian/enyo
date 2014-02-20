@@ -4,6 +4,8 @@
 		, clone = enyo.clone
 		, exists = enyo.exists;
 		
+	var Model = enyo.Model;
+		
 	/**
 		@public
 		@class enyo.ModelList
@@ -37,11 +39,9 @@
 			euid = model.euid;
 			id = model.attributes[model.primaryKey];
 			
-			// id && !loc[id] && (loc[id] = model);
-			
 			// @TODO: Absolutely must come back to this as this does not seem to be the
 			// best solution to this issue...
-			if (exists(id) && loc[id]) {
+			if (id !== null && id !== undefined) {
 				if (loc[id]) model.headless = true;
 				else loc[id] = model;
 			}
@@ -69,9 +69,9 @@
 				, id = model.attributes[model.primaryKey]
 				, idx = models.indexOf(model);
 			
-			delete loc[euid];
+			loc[euid] = null;
 			if (!model.headless) {
-				id && (delete loc[id]);
+				if (id !== null && id !== undefined) loc[id] = null;
 				idx > -1 && models.splice(idx, 1);
 				this.length = models.length;
 			}
@@ -91,13 +91,19 @@
 			@method
 		*/
 		has: function (model) {
-			if (model === undefined) return;
+			if (model === undefined || model === null) return;
 			
 			var loc = this.idTable
-				, str = (typeof model == "string") || !isNaN(model)
-				, euid = !str && model.euid
-				, id = !str && model.attributes[model.primaryKey]
-				, model = str? loc[model]: (loc[euid] || loc[id]);
+				, id, euid;
+				
+			if (typeof model == "object") {
+				id = model.attributes[model.primaryKey];
+				euid = model.euid;
+			} else {
+				id = euid = model;
+			}
+			
+			model = loc[euid] || loc[id];
 			
 			return model;
 		},

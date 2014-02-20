@@ -34,7 +34,6 @@ describe ("Collection", function () {
 				});
 				it ("should default to using existing models when possible", function () {
 					var fn;
-					col.add(shared);
 					expect(col).to.have.length(6);
 					
 					fn = function () {
