@@ -174,15 +174,15 @@
 			@method
 		*/
 		onCollectionChange: function (was, is) {
-			if (is) {
+			if (is && is !== this) {
 				if (typeof is == "string") this.collection = is = getPath(is);
 				if (!is || !(is instanceof Collection)) return;
-				if (is === this) return this.collection = this;
 				is.on("*", this.onCollectionEvent, this);
 				
 				// @TODO: Need to reset filters and update their internal content
 				// to any/all records from this new dataset?
-			}
+			} else if (is === this) this.collection = this;
+			
 			if (was) was.off("*", this.onCollectionEvent, this);
 			
 			if (!is) this.onCollectionChange(null, this);

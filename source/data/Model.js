@@ -69,12 +69,19 @@
 		/**
 			@public
 		*/
+		editing: false,
+		
+		/**
+			@public
+		*/
 		primaryKey: "id",
 		
 		/**
 			@private
 		*/
-		// proxyObjectKey: "attributes",
+		observers: [
+			{path: "editing", method: "onEditingChange"}
+		],
 		
 		/**
 			@public
@@ -93,7 +100,7 @@
 				, attrs = this.attributes
 				, keys = inc || Object.keys(attrs)
 				, cpy = inc? only(inc, attrs): clone(attrs);
-			forEach(keys, function (key) {
+			keys.forEach(function (key) {
 				var ent = this.get(key);
 				if (isFunction(ent)) cpy[key] = ent.call(this);
 				else if (ent && ent.raw) cpy[key] = ent.raw();
@@ -108,6 +115,32 @@
 		*/
 		toJSON: function () {
 			return json.stringify(this.raw());
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		restore: function (prop) {
+			if (prop) this.set(prop, this.previous[prop]);
+			else this.set(this.previous);
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		save: function () {
+			console.log("enyo.Model.save");
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		onEditingChange: function (was, is) {
+			console.log("enyo.Model.onEditingChange", was, is);
+			if (is) this.previous = clone(this.attributes);
 		},
 		
 		/**
@@ -143,7 +176,7 @@
 			@method
 		*/
 		set: function (path, is, opts) {
-			if (!this.destroyed) {
+			if (!this.destroyed) {				
 				var attrs = this.attributes
 					, prev = this.previous
 					, changed
