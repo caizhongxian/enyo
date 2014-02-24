@@ -7,5 +7,5 @@ enyo.depends(
 	"Collection.js",
 	"RelationalModel.js",
 	"ModelController.js",
-	"CollectionController.js"
+	"FilterCollection.js"
 );

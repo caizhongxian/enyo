@@ -2,7 +2,7 @@
 	
 	var kind = enyo.kind
 		, clone = enyo.clone
-		, exists = enyo.exists;
+		, mixin = enyo.mixin;
 		
 	var Model = enyo.Model;
 		
@@ -205,9 +205,11 @@
 			@private
 			@method
 		*/
-		constructor: function () {
-			this.idTable = {};
-			this._models = [];
+		constructor: function (props) {
+			props && mixin(this, props);
+			this.idTable = this.idTable || {};
+			this._models = this._models || [];
+			this.length = this._models.length;
 		},
 		
 		/**

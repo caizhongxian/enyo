@@ -244,7 +244,7 @@
 			@alias notifyObservers
 		*/
 		notify: function (path, was, is) {
-			notifyObservers(this, path, was, is);
+			return notifyObservers(this, path, was, is);
 		},
 		
 		/**

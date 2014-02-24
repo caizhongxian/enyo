@@ -125,6 +125,7 @@
 				this.isComputedDependency(path) && queueComputed(this, path);
 				sup.apply(this, arguments);
 				this._computedQueue && flushComputed(this);
+				return this;
 			};
 		}),
 		

@@ -215,12 +215,25 @@ enyo.kind({
 				'but this is an error condition and should be fixed.');
 		}
 		this.$[n] = inComponent;
-		this.notifyObservers("$." + n, null, inComponent);
+		this.notify("$." + n, null, inComponent);
+		
+		if (inComponent._public) {
+			this[n] = inComponent;
+			this.notify(n, null, inComponent);
+		}
 	},
 	//* Removes _inComponent_ from the list of components owned by the current
 	//* component (i.e., _this.$_).
 	removeComponent: function(inComponent) {
-		delete this.$[inComponent.getName()];
+		var name = inComponent.getName();
+		
+		// @TODO: Originally this delete the key but that is slow and potentially
+		// not necessary...
+		this.$[name] = null;
+		inComponent._public && (this[name] = null);
+		
+		// delete this.$[name];
+		// if (inComponent._public) delete this[name];
 	},
 	//* @public
 	/**
@@ -241,6 +254,11 @@ enyo.kind({
 		}
 		inProps.kind = inProps.kind || inProps.isa || this.defaultKind;
 		inProps.owner = inProps.owner || this;
+		
+		if (inProps.public) {
+			inProps._public = true;
+			delete inProps.public;
+		}
 	},
 	_createComponent: function(inInfo, inMoreInfo) {
 		if (!inInfo.kind && ("kind" in inInfo)) {

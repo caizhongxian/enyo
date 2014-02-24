@@ -42,6 +42,13 @@
 		mixins: [EventEmitter],
 		
 		/**
+			@private
+		*/
+		observers: [
+			{path: "models", method: "onModelsChange"}
+		],
+		
+		/**
 			@public
 			@method
 		*/
@@ -186,7 +193,7 @@
 				, complete = opts.complete;
 			
 			// we treat all additions as an array of additions
-			!isArray(models) && (models = [models]);
+			!(models instanceof Array) && (models = [models]);
 			
 			// most features dependent on notification of this action can and should
 			// avoid needing the original indices of the models being removed
@@ -358,8 +365,31 @@
 				this.remove(model);
 				break;
 			case "change":
+				this.emit("change", {model: model});
 				break;
 			}
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		onModelsChange: function () {
+			var models = this.models
+				, len = this.length;
+				
+			if (!models) models = new ModelList();
+			else if (models instanceof Array) models = new ModelList({_models: models});
+			else if (models instanceof Collection) models = models.models.clone();
+			
+			this.models = models;
+			this.length = models.length;
+			
+			// so we can send a immutable copy of the array of models
+			models = models.slice();
+			
+			if (len !== this.length) this.notify("length", len, this.length);
+			this.emit("reset", {/* for partial backward compatibility */records: models, /* prefered */models: models});
 		},
 		
 		/**
