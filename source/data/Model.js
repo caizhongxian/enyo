@@ -49,6 +49,11 @@
 		/**
 			@public
 		*/
+		source: null,
+		
+		/**
+			@public
+		*/
 		includeKeys: null,
 		
 		/**
@@ -130,17 +135,32 @@
 			@public
 			@method
 		*/
-		save: function () {
-			console.log("enyo.Model.save");
+		commit: function (opts) {
+			var options = opts? clone(opts): {}
+				, dit = this;
+				
+			options.success = function (res) {
+				dit.onCommit(res, opts);
+			};
+			
+			this.store.remote("commit", this, options);
+			return this;
 		},
 		
 		/**
-			@private
+			@public
 			@method
 		*/
-		onEditingChange: function (was, is) {
-			console.log("enyo.Model.onEditingChange", was, is);
-			if (is) this.previous = clone(this.attributes);
+		fetch: function (opts) {
+			var options = opts? clone(opts): {}
+				, dit = this;
+				
+			options.success = function (res) {
+				dit.onFetch(res, opts);
+			};
+			
+			this.store.remote("fetch", this, options);
+			return this;
 		},
 		
 		/**
@@ -148,6 +168,17 @@
 			@method
 		*/
 		destroy: function (opts) {
+			if (opts && opts.remote) {
+				var dit = this
+					, options = clone(opts);
+				options.success = function () {
+					dit.destroy();
+					opts.success && opts.success();
+				};
+				this.store.remote("destroy", this, options);
+				return this;
+			}
+			
 			// we flag this early so objects that receive an event and process it
 			// can optionally check this to support faster cleanup in some cases
 			// e.g. Collection/Store don't need to remove listeners because it will
@@ -284,6 +315,31 @@
 		*/
 		triggerEvent: function () {
 			return this.emit.apply(this, arguments);
+		},
+		
+		
+		/**
+			@private
+			@method
+		*/
+		onEditingChange: function () {
+			if (this.editing) this.previous = clone(this.attributes);
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		onFetch: function () {
+			console.log("enyo.Model.onFetch", arguments);
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		onCommit: function () {
+			console.log("enyo.Model.onCommit", arguments);
 		}
 	});
 	

@@ -24,15 +24,19 @@
 	*/
 	function addObserver (path, fn, ctx, opts) {
 		
-		var observers = this.observers();
+		var observers = this.observers()
+			, priority, noChain;
+			
+		priority = opts && opts.priority;
+		noChain = opts && opts.noChain;
 		
-		(observers[path] || (observers[path] = [])).push({
+		(observers[path] || (observers[path] = []))[priority? "unshift": "push"]({
 			method: fn,
 			ctx: ctx || this
 		});
 		
-		if ((!opts || !opts.noChain) && path.indexOf(".") > 0) {
-			this.chains().push(new ObserverChain(path, this));
+		if (!noChain && path.indexOf(".") > 0) {
+			this.chains()[priority? "unshift": "push"](new ObserverChain(path, this));
 		}
 		
 		return this;
@@ -68,17 +72,17 @@
 	/**
 		@private
 	*/
-	function notifyObservers (obj, path, was, is) {
+	function notifyObservers (obj, path, was, is, opts) {
 		if (obj.isObserving()) {
 			
 			var observers = obj.observers(path);
 			
 			if (observers && observers.length) for (var i=0, ln; (ln=observers[i]); ++i) {
-				if (typeof ln.method == "string") obj[ln.method](was, is, path);
-				else ln.method.call(ln.ctx || obj, was, is, path);
+				if (typeof ln.method == "string") obj[ln.method](was, is, path, opts);
+				else ln.method.call(ln.ctx || obj, was, is, path, opts);
 			}
 			
-		} else enqueue(obj, path, was, is);
+		} else enqueue(obj, path, was, is, opts);
 		
 		return obj;
 	}
@@ -86,13 +90,14 @@
 	/**
 		@private
 	*/
-	function enqueue (obj, path, was, is) {
+	function enqueue (obj, path, was, is, opts) {
 		if (obj._notificationQueueEnabled) {
 			var queue = obj._notificationQueue || (obj._notificationQueue = {})
 				, ln = queue[path] || (queue[path] = {});
 		
 			ln.was = was;
 			ln.is = is;
+			ln.opts
 		}
 	}
 	
@@ -108,7 +113,7 @@
 			
 			for (path in queue) {
 				ln = queue[path];
-				obj.notify(path, ln.was, ln.is);
+				obj.notify(path, ln.was, ln.is, ln.opts);
 			}
 		}
 	}
@@ -234,8 +239,8 @@
 			@public
 			@method
 		*/
-		notifyObservers: function (path, was, is) {
-			return notifyObservers(this, path, was, is);
+		notifyObservers: function (path, was, is, opts) {
+			return notifyObservers(this, path, was, is, opts);
 		},
 		
 		/**
@@ -243,8 +248,8 @@
 			@method
 			@alias notifyObservers
 		*/
-		notify: function (path, was, is) {
-			return notifyObservers(this, path, was, is);
+		notify: function (path, was, is, opts) {
+			return notifyObservers(this, path, was, is, opts);
 		},
 		
 		/**

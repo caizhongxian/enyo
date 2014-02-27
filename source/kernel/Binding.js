@@ -175,7 +175,7 @@
 		connect: function () {
 			if (!this.isConnected()) {
 				if (this.isReady()) {
-					this.source.observe(this.from, this.onSource, this);
+					this.source.observe(this.from, this.onSource, this, {priority: true});
 					
 					// for two-way bindings we register to observe changes
 					// from the target

@@ -4,7 +4,8 @@
 		, clone = enyo.clone
 		, mixin = enyo.mixin;
 		
-	var Model = enyo.Model;
+	var Model = enyo.Model
+		, ObserverSupport = enyo.ObserverSupport;
 		
 	/**
 		@public
@@ -17,23 +18,55 @@
 		noDefer: true,
 		
 		/**
+			@private
+		*/
+		mixins: [ObserverSupport],
+		
+		/**
+			@private
+		*/
+		observers: [
+			{path: "models", method: "onModelsChange"}
+		],
+		
+		/**
 			@public
 		*/
 		length: 0,
 		
 		/**
 			@private
+		*/
+		get: function (prop) {
+			return this[prop];
+		},
+		
+		/**
+			@private
+		*/
+		set: function (prop, is, opts) {
+			var was = this[prop]
+				, silent = false;
+				
+			this[prop] = is;
+			if (opts) silent = opts.silent;
+			
+			if (was !== is && !silent) this.notify(prop, was, is);
+		},
+		
+		/**
+			@private
 			@method
 		*/
-		add: function (model, idx) {
+		add: function (model, idx, opts) {
 			var loc = this.idTable
-				, models = this._models
+				, models = this.models
 				, len = this.length
 				, euid, id;
 			
 			// loop through and do the work and ensure we still return the reference
 			if (model instanceof Array) return model.forEach(function (ln) {
-				this.add(ln, idx) && ++idx;
+				this.add(ln, idx, opts) && ++idx;
 			}, this) || this;
 			
 			euid = model.euid;
@@ -50,7 +83,8 @@
 			if (!model.headless) {
 				if (!isNaN(idx) && idx < len) models.splice(idx, 0, model);
 				else models.push(model);
-				this.length = models.length;
+				// this.length = models.length;
+				this.set("length", models.length, opts);
 			}
 			return this;
 		},
@@ -59,12 +93,14 @@
 			@private
 			@method
 		*/
-		remove: function (model) {
+		remove: function (model, opts) {
 			// loop through and do the work and ensure we still return the reference
-			if (model instanceof Array) return model.forEach(this.remove, this) || this;
+			if (model instanceof Array) return model.forEach(function (ln) {
+				this.remove(ln, opts);
+			}, this) || this;
 			
 			var loc = this.idTable
-				, models = this._models
+				, models = this.models
 				, euid = model.euid
 				, id = model.attributes[model.primaryKey]
 				, idx = models.indexOf(model);
@@ -73,7 +109,8 @@
 			if (!model.headless) {
 				if (id !== null && id !== undefined) loc[id] = null;
 				idx > -1 && models.splice(idx, 1);
-				this.length = models.length;
+				// this.length = models.length;
+				this.set("length", models.length, opts);
 			}
 			return this;
 		},
@@ -83,7 +120,7 @@
 			@method
 		*/
 		slice: function (from, to) {
-			return this._models.slice(from, to);
+			return this.models.slice(from, to);
 		},
 		
 		/**
@@ -121,7 +158,7 @@
 			@method
 		*/
 		indexOf: function (model, offset) {
-			return this._models.indexOf(model, offset);
+			return this.models.indexOf(model, offset);
 		},
 		
 		/**
@@ -129,7 +166,7 @@
 			@method
 		*/
 		at: function (idx) {
-			return this._models[idx];
+			return this.models[idx];
 		},
 		
 		/**
@@ -137,7 +174,7 @@
 			@method
 		*/
 		forEach: function (fn, ctx) {
-			return this._models.forEach(fn, ctx || this);
+			return this.models.slice().forEach(fn, ctx || this);
 		},
 		
 		/**
@@ -145,7 +182,7 @@
 			@method
 		*/
 		map: function (fn, ctx) {
-			return this._models.map(fn, ctx || this);
+			return this.models.slice().map(fn, ctx || this);
 		},
 		
 		/**
@@ -153,7 +190,7 @@
 			@method
 		*/
 		filter: function (fn, ctx) {
-			return this._models.filter(fn, ctx || this);
+			return this.models.slice().filter(fn, ctx || this);
 		},
 		
 		/**
@@ -161,7 +198,7 @@
 			@method
 		*/
 		find: function (fn, ctx) {
-			return this._models.find(fn, ctx || this);
+			return this.models.slice().find(fn, ctx || this);
 		},
 		
 		/**
@@ -169,7 +206,7 @@
 			@method
 		*/
 		findIndex: function (fn, ctx) {
-			return this._models.findIndex(fn, ctx || this);
+			return this.models.slice().findIndex(fn, ctx || this);
 		},
 		
 		/**
@@ -177,7 +214,7 @@
 			@method
 		*/
 		where: function (fn, ctx) {
-			return this._models.find(fn, ctx || this);
+			return this.models.slice().find(fn, ctx || this);
 		},
 		
 		/**
@@ -185,7 +222,7 @@
 			@method
 		*/
 		sort: function (fn) {
-			this._models.sort(fn);
+			this.models.sort(fn);
 			return this.slice();
 		},
 		
@@ -196,7 +233,7 @@
 		clone: function () {
 			var cpy = new this.ctor();
 			cpy.idTable = clone(this.idTable);
-			cpy._models = this._models.slice();
+			cpy.models = this.models.slice();
 			cpy.length = this.length;
 			return cpy;
 		},
@@ -208,8 +245,30 @@
 		constructor: function (props) {
 			props && mixin(this, props);
 			this.idTable = this.idTable || {};
-			this._models = this._models || [];
-			this.length = this._models.length;
+			this.models = this.models || [];
+			this.length = this.models.length;
+			
+			// if we were constructed from existing data we need to ensure we
+			// have an udpated table
+			if (this.length && !props.idTable) this.index();
+		},
+		
+		/**
+			@private
+		*/
+		index: function () {
+			var models = this.models
+				, loc = this.idTable
+				, model, euid, id;
+			
+			for (var i=0, len=models.length; i<len; ++i) {
+				model = models[i];
+				euid = model.euid;
+				id = model.attributes[model.primaryKey];
+				
+				loc[euid] = model;
+				id !== null && id !== undefined && (loc[id] = model);
+			}
 		},
 		
 		/**
@@ -218,7 +277,17 @@
 		*/
 		destroy: function () {
 			this.idTable = null;
-			this._models = null;
+			this.models = null;
+		},
+		
+		/**
+			@private
+		*/
+		onModelsChange: function () {
+			var models = this.models;
+			
+			this.index();
+			this.set("length", models.length);
 		}
 			
 	});

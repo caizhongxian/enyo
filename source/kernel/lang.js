@@ -444,7 +444,7 @@
 		
 		// if possible we notify the changes but this change is notified from the immediate
 		// parent not the root object (could be the same)
-		if (next.notify && !silent && (force || was !== is || (comparator && comparator(was, is)))) next.notify(part, was, is);
+		if (next.notify && !silent && (force || was !== is || (comparator && comparator(was, is)))) next.notify(part, was, is, opts);
 		// we will always return the original root-object of the call
 		return base;
 	};
@@ -543,7 +543,7 @@
 		@method enyo.trim
 	*/
 	enyo.trim = function (str) {
-		return (str && str.length && str.trim()) || "";
+		return (typeof str == "string" && str.trim()) || str;
 	};
 	
 	// ----------------------------------
@@ -584,9 +584,7 @@
 		@public
 		@method enyo.keys
 	*/
-	enyo.keys = function(obj) {
-		return Object.keys(obj);
-	};
+	enyo.keys = Object.keys;
 	
 	/**
 		Convenience method that takes an array of properties and an object
@@ -770,27 +768,23 @@
 		@public
 		@method enyo.mixin
 	*/
-	enyo.mixin = function () {
+	var mixin = enyo.mixin = function () {
 		var ret = arguments[0]
 			, src = arguments[1]
 			, opts = arguments[2]
 			, val;
 		
-		if (!ret) {
-			ret = {};
-		} else if (ret instanceof Array) {
+		if (!ret) ret = {};
+		else if (ret instanceof Array) {
 			opts = src;
 			src = ret;
 			ret = {};
 		}
 		
-		if (!opts || opts === true) {
-			opts = mixinDefaults;
-		}
+		if (!opts || opts === true) opts = mixinDefaults;
 
-		if (src instanceof Array) {
-			for (var i=0, it; (it=src[i]); ++i) enyo.mixin(ret, it, opts);
-		} else {
+		if (src instanceof Array) for (var i=0, it; (it=src[i]); ++i) mixin(ret, it, opts);
+		else {
 			for (var key in src) {
 				val = src[key];
 				

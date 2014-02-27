@@ -249,8 +249,23 @@
 				this.remove(model);
 				break;
 			case "change":
+				// @TODO: PrimaryKey/id change..
 				break;
 			}
+		},
+		
+		/**
+			@public
+			@method
+		*/
+		remote: function (action, model, opts) {
+			var source = enyo.sources[model.source];
+			
+			if (source) {
+				if (source[action]) source[action](model, opts);
+			}
+			
+			// @TODO: Should this throw an error??
 		},
 		
 		/**

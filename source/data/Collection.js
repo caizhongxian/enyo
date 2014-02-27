@@ -49,6 +49,13 @@
 		],
 		
 		/**
+			@private
+		*/
+		bindings: [
+			{from: "models.length", to: "length"}
+		],
+		
+		/**
 			@public
 			@method
 		*/
@@ -162,11 +169,11 @@
 			
 			added && loc.add(added, idx);
 			added && sort && this.sort(sort, {silent: true});
-			this.length = loc.length;
+			// this.length = loc.length;
 			
 			if (!silent) {
 				// notify observers of the length change
-				len != this.length && this.notify("length", len, this.length);
+				// len != this.length && this.notify("length", len, this.length);
 				// notify listeners of the addition of records
 				added && this.emit("add", {/* for backward compatibility */ records: added, /* prefered */ models: added});
 			}
@@ -195,11 +202,13 @@
 			// we treat all additions as an array of additions
 			!(models instanceof Array) && (models = [models]);
 			
+			loc.stopNotifications();
+			
 			// most features dependent on notification of this action can and should
 			// avoid needing the original indices of the models being removed
 			for (var i=0, end=models.length; i<end; ++i) {
 				model = models[i];
-				loc.remove(model);
+				loc.remove(model, {silent: true});
 				// we know if it successfully removed the model because the length was
 				// updated accordingly
 				if (loc.length != len) {
@@ -218,13 +227,15 @@
 				}
 			}
 			
+			loc.startNotifications();
+			
 			// we have to update this value regardless so ensure we know the original in case
 			// we need to provide an update
-			len = this.length;
-			this.length = loc.length;
+			// len = this.length;
+			// this.length = loc.length;
 			
 			if (!silent) {
-				len != this.length && this.notify("length", len, this.length);
+				// len != this.length && this.notify("length", len, this.length);
 				removed && this.emit("remove", {/* for partial backward compatibility */records: removed, /* prefered */models: removed});
 			}
 			return removed;
@@ -374,21 +385,49 @@
 			@private
 			@method
 		*/
-		onModelsChange: function () {
-			var models = this.models
-				, len = this.length;
-				
-			if (!models) models = new ModelList();
-			else if (models instanceof Array) models = new ModelList({_models: models});
-			else if (models instanceof Collection) models = models.models.clone();
+		onModelsChange: function (was, is, prop, opts) {
+			var models = this.models.slice();
 			
-			this.models = models;
-			this.length = models.length;
+			// if (was) was.destroy();
 			
-			// so we can send a immutable copy of the array of models
-			models = models.slice();
-			
-			if (len !== this.length) this.notify("length", len, this.length);
+			// 	, len = this.length
+			// 	// shared indicates that this should not be a clone but a reference to the
+			// 	// other object or at least the underlying models array when possible
+			// 	, shared = opts.shared;
+			// 
+			// // if for some reason they were cleared we ensure that it will have some model list to work with
+			// if (!models) models = new ModelList();
+			// // if it is a raw array it is assumed that this is to be the starting place of the
+			// // model list
+			// else if (models instanceof Array) {
+			// 	
+			// 	// shared has no meaning in this scenario because we won't be able to share the
+			// 	// idTable as well
+			// 	if (was && was instanceof ModelList) {
+			// 		// @NOTE: This is done this way to ensure that if the model list is a shared reference
+			// 		// it is maintained that way between collections
+			// 		for (var i=0, len=models.length; i<len; ++i) was._models[i] = models[i];
+			// 		was._models.length = len;
+			// 		// must update the table to match
+			// 		was.index();
+			// 		models = was;
+			// 	} else models = new ModelList({_models: models.slice()});
+			// }
+			// // if it is itself a collection
+			// else if (models instanceof Collection) {
+			// 	models = shared? models.models: models.models.clone();
+			// }
+			// // or if it is an instance of a model list and shared isn't true then we need to
+			// // clone it otherwise leave it alone
+			// else if (models instanceof ModelList && !shared) models = models.clone();
+			// 
+			// this.models = models;
+			// this.length = models.length;
+			// 
+			// // so we can send an immutable copy of the array of models
+			// models = models.slice();
+			// 
+			// if (len !== this.length) this.notify("length", len, this.length);
 			this.emit("reset", {/* for partial backward compatibility */records: models, /* prefered */models: models});
 		},
 		
@@ -404,7 +443,8 @@
 				props = recs && !isArray(recs)? recs: props;
 				if (props === recs) recs = null;
 				// initialize our core records
-				this.models = this.models || new ModelList();
+				// this.models = this.models || new ModelList();
+				!this.models && (this.set("models", new ModelList()));
 				
 				if (props && props.records) {
 					recs = recs? recs.concat(props.records): props.records.slice();

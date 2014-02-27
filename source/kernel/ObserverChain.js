@@ -58,7 +58,7 @@
 			var obj = this.object
 				, obs = this.onChange
 				, prop = this.property;
-			obj && obj.observe && obj.observe(prop, obs, this, {noChain: true});
+			obj && obj.observe && obj.observe(prop, obs, this, {noChain: true, priority: true});
 		},
 		
 		/**

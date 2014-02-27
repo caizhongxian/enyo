@@ -633,7 +633,7 @@ enyo.Component.subclass = function(ctor, props) {
 	var proto = ctor.prototype;
 	//
 	if (props.components) {
-		proto.kindComponents = props.components;
+		proto.kindComponents = proto.kindComponents? proto.kindComponents.concat(props.components): props.components;
 		delete proto.components;
 	} else {
 		// Feature to mixin overrides of super-kind component properties from named hash
