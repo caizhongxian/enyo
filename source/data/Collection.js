@@ -229,11 +229,6 @@
 			
 			loc.startNotifications();
 			
-			// we have to update this value regardless so ensure we know the original in case
-			// we need to provide an update
-			// len = this.length;
-			// this.length = loc.length;
-			
 			if (!silent) {
 				// len != this.length && this.notify("length", len, this.length);
 				removed && this.emit("remove", {/* for partial backward compatibility */records: removed, /* prefered */models: removed});
@@ -369,8 +364,6 @@
 			@method
 		*/
 		onModelEvent: function (model, e) {
-			// this.log(arguments);
-			
 			switch (e) {
 			case "destroy":
 				this.remove(model);
@@ -390,44 +383,6 @@
 			
 			// if (was) was.destroy();
 			
-			// 	, len = this.length
-			// 	// shared indicates that this should not be a clone but a reference to the
-			// 	// other object or at least the underlying models array when possible
-			// 	, shared = opts.shared;
-			// 
-			// // if for some reason they were cleared we ensure that it will have some model list to work with
-			// if (!models) models = new ModelList();
-			// // if it is a raw array it is assumed that this is to be the starting place of the
-			// // model list
-			// else if (models instanceof Array) {
-			// 	
-			// 	// shared has no meaning in this scenario because we won't be able to share the
-			// 	// idTable as well
-			// 	if (was && was instanceof ModelList) {
-			// 		// @NOTE: This is done this way to ensure that if the model list is a shared reference
-			// 		// it is maintained that way between collections
-			// 		for (var i=0, len=models.length; i<len; ++i) was._models[i] = models[i];
-			// 		was._models.length = len;
-			// 		// must update the table to match
-			// 		was.index();
-			// 		models = was;
-			// 	} else models = new ModelList({_models: models.slice()});
-			// }
-			// // if it is itself a collection
-			// else if (models instanceof Collection) {
-			// 	models = shared? models.models: models.models.clone();
-			// }
-			// // or if it is an instance of a model list and shared isn't true then we need to
-			// // clone it otherwise leave it alone
-			// else if (models instanceof ModelList && !shared) models = models.clone();
-			// 
-			// this.models = models;
-			// this.length = models.length;
-			// 
-			// // so we can send an immutable copy of the array of models
-			// models = models.slice();
-			// 
-			// if (len !== this.length) this.notify("length", len, this.length);
 			this.emit("reset", {/* for partial backward compatibility */records: models, /* prefered */models: models});
 		},
 		
