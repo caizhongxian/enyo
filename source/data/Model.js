@@ -59,7 +59,12 @@
 		/**
 			@public
 		*/
-		options: {},
+		options: {
+			silent: false,
+			remote: false,
+			commit: false,
+			parse: false
+		},
 		
 		/**
 			@public
@@ -119,7 +124,9 @@
 			@method
 		*/
 		toJSON: function () {
-			return json.stringify(this.raw());
+			
+			// because it is expected to return a JSON parseable object...
+			return this.raw();
 		},
 		
 		/**
@@ -127,6 +134,7 @@
 			@method
 		*/
 		restore: function (prop) {
+			debugger
 			if (prop) this.set(prop, this.previous[prop]);
 			else this.set(this.previous);
 		},
@@ -140,7 +148,11 @@
 				, dit = this;
 				
 			options.success = function (res) {
-				dit.onCommit(res, opts);
+				dit.onCommit(opts, res);
+			};
+			
+			options.error = function (res) {
+				dit.onError("commit", opts, res);
 			};
 			
 			this.store.remote("commit", this, options);
@@ -159,6 +171,10 @@
 				dit.onFetch(res, opts);
 			};
 			
+			options.error = function (res) {
+				dit.onError("fetch", opts, res);
+			};
+			
 			this.store.remote("fetch", this, options);
 			return this;
 		},
@@ -168,12 +184,12 @@
 			@method
 		*/
 		destroy: function (opts) {
-			if (opts && opts.remote) {
+			if (opts && opts.source) {
 				var dit = this
 					, options = clone(opts);
 				options.success = function () {
 					dit.destroy();
-					opts.success && opts.success();
+					opts.success && opts.success(opts);
 				};
 				this.store.remote("destroy", this, options);
 				return this;
@@ -209,13 +225,11 @@
 		set: function (path, is, opts) {
 			if (!this.destroyed) {				
 				var attrs = this.attributes
-					, prev = this.previous
-					, changed
-					, incoming
-					, force
-					, silent
-					, key
-					, value;
+					// to keep us from having to clone attributes during initialization the first set
+					// request will update this and shouldn't need to do it again!
+					, prev = this.previous || (this.previous = clone(attrs))
+					, options = this.options
+					, changed, incoming, force, silent, key, value, commit;
 				
 				if (typeof path == "object") {
 					incoming = path;
@@ -230,14 +244,17 @@
 					opts = {};
 				}
 			
-				opts || (opts = {});
+				// opts || (opts = this.options);
+				opts = opts? mixin({}, [options, opts]): options;
 				silent = opts.silent;
 				force = force || opts.force;
+				commit = opts.commit;
 			
 				for (key in incoming) {
 					value = incoming[key];
 				
 					if (value !== attrs[key] || force) {
+						// merely in case it was reassigned or cleared unknowingly
 						prev || (prev = this.previous = {});
 						changed || (changed = this.changed = {});
 						// assign previous value for reference
@@ -251,6 +268,8 @@
 					this.isDirty = true;
 				
 					if (!silent && !this.isSilenced()) this.emit("change", changed, this);
+					
+					commit && this.commit();
 				}
 			}
 		},
@@ -272,22 +291,36 @@
 			@method
 		*/
 		constructor: function (attrs, props, opts) {
-			opts = opts? (this.options = mixin({}, [this.options, opts])): this.options;
 			
 			// ensure we have the requested properties
+			if (props && props.options) {
+				opts = this.options = mixin({}, [this.options, props.options]);
+				delete props.options;
+			}
+			
+			// opts = opts? (this.options = mixin({}, [this.options, opts])): this.options;
+			opts = opts? mixin({}, [this.options, opts]): this.options;
+			
+			var noAdd = opts.noAdd
+				, commit = opts.commit
+				, parse = opts.parse
+				, defaults;
+
 			props && mixin(this, props);
+			
+			defaults = this.defaults && (typeof this.defaults == "function"? this.defaults(attrs, opts): this.defaults);
 			
 			// ensure we have a unique identifier that could potentially
 			// be used in remote systems
 			this.euid = this.euid || uid("m");
 			
 			// if necessary we need to parse the incoming attributes
-			attrs = attrs? opts.parse? this.parse(attrs): attrs: null;
+			attrs = attrs? parse? this.parse(attrs): attrs: null;
 			
 			// ensure we have the updated attributes
-			this.attributes = this.attributes? this.defaults? mixin({}, [this.defaults, this.attributes]): clone(this.attributes): this.defaults? clone(this.defaults): {};
+			this.attributes = this.attributes? defaults? mixin({}, [defaults, this.attributes]): clone(this.attributes): defaults? clone(defaults): {};
 			attrs && mixin(this.attributes, attrs);
-			this.previous = clone(this.attributes);
+			// this.previous = clone(this.attributes);
 			
 			// now we need to ensure we have a store and register with it
 			this.store = this.store || enyo.store;
@@ -295,7 +328,9 @@
 			// @TODO: The idea here is that when batch instancing records a collection
 			// should be intelligent enough to avoid doing each individually or in some
 			// cases it may be useful to have a record that is never added to a store?
-			if (!opts || !opts.noAdd) this.store.add(this, opts);
+			if (!noAdd) this.store.add(this, opts);
+			
+			commit && this.commit();
 		},
 		
 		/**
@@ -340,6 +375,13 @@
 		*/
 		onCommit: function () {
 			console.log("enyo.Model.onCommit", arguments);
+		},
+		
+		/**
+			@private
+		*/
+		onError: function () {
+			console.log("enyo.Model.onError", arguments);
 		}
 	});
 	

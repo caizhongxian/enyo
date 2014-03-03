@@ -55,6 +55,6 @@
 		}
 	});
 	
-	new AjaxSource();
+	// new AjaxSource();
 	
 })(enyo);

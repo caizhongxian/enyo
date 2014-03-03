@@ -74,14 +74,12 @@
 	*/
 	function notifyObservers (obj, path, was, is, opts) {
 		if (obj.isObserving()) {
-			
 			var observers = obj.observers(path);
 			
 			if (observers && observers.length) for (var i=0, ln; (ln=observers[i]); ++i) {
 				if (typeof ln.method == "string") obj[ln.method](was, is, path, opts);
 				else ln.method.call(ln.ctx || obj, was, is, path, opts);
 			}
-			
 		} else enqueue(obj, path, was, is, opts);
 		
 		return obj;

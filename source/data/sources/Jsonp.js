@@ -57,6 +57,6 @@
 		}
 	});
 	
-	new JsonpSource();
+	// new JsonpSource();
 	
 })(enyo);

@@ -56,7 +56,6 @@
 	*/
 	function flushComputed (obj) {
 		var queue = obj._computedQueue;
-		
 		obj._computedQueue = null;
 		if (queue && obj.isObserving()) for (var i=0, ln; (ln=queue[i]); ++i) {
 			obj.notify(ln, obj._getComputedCache(ln).value, getComputedValue(obj, ln));
@@ -69,6 +68,11 @@
 	*/
 	ComputedSupport = enyo.ComputedSupport = {
 		name: "ComputedSupport",
+		
+		/**
+			@private
+		*/
+		_computedRecursion: 0,
 		
 		/**
 			@public
@@ -123,8 +127,10 @@
 		notify: inherit(function (sup) {
 			return function (path, was, is) {
 				this.isComputedDependency(path) && queueComputed(this, path);
+				this._computedRecursion++;
 				sup.apply(this, arguments);
-				this._computedQueue && flushComputed(this);
+				this._computedRecursion--;
+				this._computedQueue && this._computedRecursion === 0 && flushComputed(this);
 				return this;
 			};
 		}),

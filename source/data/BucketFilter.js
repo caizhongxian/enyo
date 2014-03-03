@@ -28,8 +28,9 @@
 		/**
 			@public
 		*/
-		reset: function () {
+		reset: function (opts) {
 			// @TODO: What should this actually do?
+			return this.set("filterName", this.defaultFilterName, opts);
 		},
 		
 		/**
@@ -109,7 +110,7 @@
 			@private
 		*/
 		onFilterCollectionEvent: function (sender, e, props) {
-			this.emit(e, props);
+			if (!this.isSilenced()) this.emit(e, props);
 		}
 	});
 	

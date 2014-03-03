@@ -4,11 +4,15 @@
 		, inherit = enyo.inherit
 		, nop = enyo.nop
 		, remove = enyo.remove
+		, only = enyo.only
+		, mixin = enyo.mixin
 		, constructorForKind = enyo.constructorForKind;
 	
 	var Collection = enyo.Collection;
 	
 	/**
+		@NOTE: add, remove, fetch, sort, commit...all ALWAYS act on the full collection.
+	
 		@public
 		@class enyo.Filter
 	*/
@@ -55,6 +59,46 @@
 			{path: "collection", method: "onCollectionChange"}
 		],
 		
+		
+		/**
+			@private
+		*/
+		commit: inherit(function (sup) {
+			return function () {
+				var is = this.models
+					, shouldBe = this.collection.models;
+				
+				// facade the correct, complete models so that it will always be complete
+				// @NOTE: If ever I get my wish and have time to move us to asynchronous events (et al)
+				// this type of operation will no longer work as-is (like so many others)
+				if (is !== shouldBe) this.set("models", shouldBe, {silent: true});
+				sup.apply(this, arguments);
+				return is !== shouldBe? this.set("models", is): this;
+			};
+		}),
+		
+		fetch: inherit(function (sup) {
+			return function () {
+				var is = this.models
+					, shouldBe = this.collection.models;
+				
+				if (is !== shouldBe) this.set("models", shouldBe, {silent: true});
+				sup.apply(this, arguments);
+				return is !== shouldBe? this.set("models", is): this;
+			};
+		}),
+		
+		sort: inherit (function (sup) {
+			return function () {
+				var is = this.models
+					, shouldBe = this.collection.models;
+				
+				if (is !== shouldBe) this.set("models", shouldBe, {silent: true});
+				sup.apply(this, arguments);
+				return is !== shouldBe? this.set("models", is): this;
+			};
+		}),
+		
 		/**
 			@public
 		*/
@@ -65,7 +109,12 @@
 		*/
 		constructed: inherit(function (sup) {
 			return function () {
-				var owner;
+				var fetch = this.options.fetch
+					, owner;
+					
+				// we need to ensure that the collection doesn't try to fetch before we create our
+				// default collection and finish initializing
+				this.options.fetch = false;
 				
 				sup.apply(this, arguments);
 				
@@ -74,8 +123,12 @@
 				
 				// will be public for internal reference but is not a public property by declaration
 				// and thus still reserved for internal purposes
-				this.createChrome([{name: "_collection", kind: /*SubFilter*/ Collection}]);
+				this.createChrome([/*mixin({}, [only(this._collectionKeys, this), */{name: "_collection", kind: Collection}/*])*/]);
 				this.set("collection", this.collection || this._collection);
+				
+				// if we were supposed to automatically fetch we reassign the correct value and
+				// do as we're told
+				fetch && (this.options.fetch = fetch) && this.fetch();
 			};
 		}),
 		
@@ -111,6 +164,8 @@
 			// we always re-emit the event as our own to ensure that anyone interested
 			// is updated accordingly
 			this.emit(e, props);
+			
+			if (this.options.commit) this.commit();
 		},
 		
 		/**
@@ -126,8 +181,21 @@
 		*/
 		add: inherit(function (sup) {
 			return function (models, opts) {
-				this.collection.add(models, opts);
-				return this;
+				var is = this.models
+					, collection = this.collection
+					, shouldBe = collection.models
+					, added;
+					
+				opts || (opts = {});
+				opts.silent = true;
+				
+				if (is !== shouldBe) this.silence().set("models", shouldBe, {silent: true});
+				added = sup.call(this, models, opts);
+				added && added.forEach(function (model) { collection.prepareModel(model); });
+				added && this.emit("sync", {models: shouldBe.slice()});
+				if (is !== shouldBe) this.unsilence().set("models", is);
+				else this.emit("add", {models: added});
+				return added;
 			};
 		}),
 		
@@ -136,8 +204,22 @@
 		*/
 		remove: inherit(function (sup) {
 			return function (models, opts) {
-				this.collection.remove(models, opts);
-				return this;
+				
+				var is = this.models
+					, collection = this.collection
+					, shouldBe = collection.models
+					, removed;
+				
+				opts || (opts = {});
+				opts.silent = true;
+				
+				if (is !== shouldBe) this.silence().set("models", shouldBe, {silent: true});
+				removed = sup.call(this, models, opts);
+				removed && removed.forEach(function (model) { model.off("*", collection.onModelEvent, collection); });
+				removed && this.emit("sync", {models: shouldBe.slice()});
+				if (is !== shouldBe) this.unsilence().set("models", is);
+				else this.emit("remove", {models: removed});
+				return removed;
 			};
 		})
 	});

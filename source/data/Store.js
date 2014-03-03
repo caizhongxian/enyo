@@ -259,10 +259,19 @@
 			@method
 		*/
 		remote: function (action, model, opts) {
-			var source = enyo.sources[model.source];
+			var source = opts.source || model.source
+				, name;
 			
 			if (source) {
-				if (source[action]) source[action](model, opts);
+				if (source === true) for (name in enyo.sources) {
+					source = enyo.sources[name];
+					if (source[action]) source[action](model, opts);
+				} else if (source instanceof Array) {
+					source.forEach(function (name) {
+						var src = enyo.sources[name];
+						if (src && src[action]) src[action](models, opts);
+					});
+				} else if ((source = enyo.sources[source]) && source[action]) source[action](model, opts);
 			}
 			
 			// @TODO: Should this throw an error??
