@@ -2,12 +2,12 @@
 	
 	var kind = enyo.kind
 		, inherit = enyo.inherit
-		, bind = enyo.bindSafely
-		, filter = enyo.filter
+		// , bind = enyo.bindSafely
+		// , filter = enyo.filter
 		, toArray = enyo.toArray
-		, forEach = enyo.forEach
+		// , forEach = enyo.forEach
 		, mixin = enyo.mixin
-		, isFunction = enyo.isFunction;
+		// , isFunction = enyo.isFunction;
 		
 	var EventEmitter = enyo.EventEmitter
 		, ModelList = enyo.ModelList;
@@ -60,9 +60,9 @@
 		*/
 		changeset: function () {
 			return {
-				changed: this.changed.models(),
-				destroyed: this.destroyed.models(),
-				created: this.created.models()
+				changed: this.changed.slice(),
+				destroyed: this.destroyed.slice(),
+				created: this.created.slice()
 			};
 		},
 		
@@ -72,7 +72,7 @@
 		*/
 		on: inherit(function (sup) {
 			return function (ctor, e, fn, ctx) {
-				if (isFunction(ctor)) {
+				if (typeof ctor == "function") {
 					this.scopeListeners().push({
 						scope: ctor,
 						event: e,
@@ -101,13 +101,13 @@
 		*/
 		emit: inherit(function (sup) {
 			return function (ctor, e) {
-				if (isFunction(ctor)) {
+				if (typeof ctor == "function") {
 					var listeners = this.scopeListeners(ctor, e);
 					
 					if (listeners.length) {
 						var args = toArray(arguments).slice(1);
 						args.unshift(this);
-						forEach(listeners, function (ln) {
+						listeners.forEach(function (ln) {
 							ln.method.apply(ln.ctx, args);
 						});
 						return true;
@@ -133,12 +133,12 @@
 		*/
 		off: inherit(function (sup) {
 			return function (ctor, e, fn) {
-				if (isFunction(ctor)) {
+				if (typeof ctor == "function") {
 					var listeners = this.scopeListeners()
 						, idx;
 						
 					if (listeners.length) {
-						idx = find(listeners, function (ln) {
+						idx = listeners.findIndex(function (ln) {
 							return ln.scope === ctor && ln.event == e && ln.method === fn;
 						});
 						idx >= 0 && listeners.splice(idx, 1);
@@ -164,7 +164,7 @@
 			@method
 		*/
 		scopeListeners: function (scope, e) {
-			return !scope? this._scopeListeners: filter(this._scopeListeners, function (ln) {
+			return !scope? this._scopeListeners: this._scopeListeners.filter(function (ln) {
 				return ln.scope === scope? !e? true: ln.event === e: false; 
 			});
 		},

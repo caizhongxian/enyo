@@ -777,7 +777,6 @@
 		*/
 		initRelations: function () {
 			var rels = this.relations || (this.relations = []);
-			
 			if (rels.length) {
 				this.relations = rels.map(function (ln) {
 					return new ln.type(this, ln);
