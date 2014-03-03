@@ -79,19 +79,7 @@
 		/**
 			@public
 		*/
-		editing: false,
-		
-		/**
-			@public
-		*/
 		primaryKey: "id",
-		
-		/**
-			@private
-		*/
-		observers: [
-			{path: "editing", method: "onEditingChange"}
-		],
 		
 		/**
 			@public
@@ -134,7 +122,6 @@
 			@method
 		*/
 		restore: function (prop) {
-			debugger
 			if (prop) this.set(prop, this.previous[prop]);
 			else this.set(this.previous);
 		},
@@ -148,13 +135,14 @@
 				, dit = this;
 				
 			options.success = function (res) {
+				this.previous = clone(this.attributes);
 				dit.onCommit(opts, res);
 			};
-			
+		
 			options.error = function (res) {
 				dit.onError("commit", opts, res);
 			};
-			
+		
 			this.store.remote("commit", this, options);
 			return this;
 		},
@@ -184,12 +172,12 @@
 			@method
 		*/
 		destroy: function (opts) {
-			if (opts && opts.source) {
+			if ((this.options.commit && (!opts || opts.commit !== false)) || (opts && (opts.source || opts.commit))) {
 				var dit = this
-					, options = clone(opts);
+					, options = opts? clone(opts): {};
 				options.success = function () {
-					dit.destroy();
-					opts.success && opts.success(opts);
+					dit.destroy({commit: false});
+					opts && opts.success && opts.success(opts);
 				};
 				this.store.remote("destroy", this, options);
 				return this;
@@ -215,7 +203,7 @@
 			@method
 		*/
 		get: function (path) {
-			return this.isComputed(path)? this.getLocal(path): this.attributes[path];
+			return this.isComputed(path)? this.getLocal(path): this.editing? this.edited[path]: this.attributes[path];
 		},
 		
 		/**
@@ -223,14 +211,12 @@
 			@method
 		*/
 		set: function (path, is, opts) {
-			if (!this.destroyed) {				
+			if (!this.destroyed) {
+				
 				var attrs = this.attributes
-					// to keep us from having to clone attributes during initialization the first set
-					// request will update this and shouldn't need to do it again!
-					, prev = this.previous || (this.previous = clone(attrs))
 					, options = this.options
 					, changed, incoming, force, silent, key, value, commit;
-				
+					
 				if (typeof path == "object") {
 					incoming = path;
 					opts || (opts = is);
@@ -238,37 +224,34 @@
 					incoming = {};
 					incoming[path] = is;
 				}
-			
+		
 				if (opts === true) {
 					force = true;
 					opts = {};
 				}
-			
+		
 				// opts || (opts = this.options);
 				opts = opts? mixin({}, [options, opts]): options;
 				silent = opts.silent;
 				force = force || opts.force;
 				commit = opts.commit;
-			
+		
 				for (key in incoming) {
 					value = incoming[key];
-				
+			
 					if (value !== attrs[key] || force) {
 						// merely in case it was reassigned or cleared unknowingly
-						prev || (prev = this.previous = {});
 						changed || (changed = this.changed = {});
-						// assign previous value for reference
-						prev[key] = attrs[key];
 						changed[key] = attrs[key] = value;
 					}
 				}
-			
+		
 				if (changed) {
 					// must flag this model as having been updated
 					this.isDirty = true;
-				
+			
 					if (!silent && !this.isSilenced()) this.emit("change", changed, this);
-					
+				
 					commit && this.commit();
 				}
 			}
@@ -320,7 +303,7 @@
 			// ensure we have the updated attributes
 			this.attributes = this.attributes? defaults? mixin({}, [defaults, this.attributes]): clone(this.attributes): defaults? clone(defaults): {};
 			attrs && mixin(this.attributes, attrs);
-			// this.previous = clone(this.attributes);
+			this.previous = clone(this.attributes);
 			
 			// now we need to ensure we have a store and register with it
 			this.store = this.store || enyo.store;
@@ -351,16 +334,6 @@
 		triggerEvent: function () {
 			return this.emit.apply(this, arguments);
 		},
-		
-		
-		/**
-			@private
-			@method
-		*/
-		onEditingChange: function () {
-			if (this.editing) this.previous = clone(this.attributes);
-		},
-		
 		/**
 			@private
 			@method
