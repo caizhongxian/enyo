@@ -6,9 +6,10 @@
 		, mixin = enyo.mixin;
 	
 	var ProxyObject = enyo.ProxyObject
-		, ObserverSupport = enyo.ObserverSupport
+		, Component = enyo.Component
+		// , ObserverSupport = enyo.ObserverSupport
 		, ComputedSupport = enyo.ComputedSupport
-		, BindingSupport = enyo.BindingSupport
+		// , BindingSupport = enyo.BindingSupport
 		, EventEmitter = enyo.EventEmitter
 		, oObject = enyo.Object;
 	
@@ -16,8 +17,8 @@
 		@private
 	*/
 	var BaseModelController = kind({
-		kind: null,
-		mixins: [ObserverSupport, ComputedSupport, BindingSupport, EventEmitter, ProxyObject]
+		kind: Component,
+		mixins: [/*ObserverSupport, */ComputedSupport, /*BindingSupport, */EventEmitter, ProxyObject]
 	});
 	
 	/**

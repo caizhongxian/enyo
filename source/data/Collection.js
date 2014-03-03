@@ -256,7 +256,7 @@
 			// avoid needing the original indices of the models being removed
 			for (var i=0, end=models.length; i<end; ++i) {
 				model = models[i];
-				loc.remove(model, {silent: true});
+				loc.remove(model/*, {silent: true}*/);
 				// we know if it successfully removed the model because the length was
 				// updated accordingly
 				if (loc.length != len) {

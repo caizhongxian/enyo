@@ -136,8 +136,8 @@ describe ("Model", function () {
 				it ("all subkinds should properly inherit and merge options", function () {
 					var ctor1 = enyo.kind({kind: "enyo.Model", options: {prop1: true, prop2: false}})
 						, ctor2 = enyo.kind({kind: ctor1, options: {prop2: true, prop3: false}});
-					expect(ctor1.prototype.options).to.have.keys("prop1", "prop2");
-					expect(ctor2.prototype.options).to.have.keys("prop1", "prop2", "prop3");
+					expect(ctor1.prototype.options).to.include.keys("prop1", "prop2");
+					expect(ctor2.prototype.options).to.include.keys("prop1", "prop2", "prop3");
 				});
 			});
 		});
