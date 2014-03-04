@@ -187,7 +187,7 @@
 			if (!model.headless) {
 				model.on("*", this.onModelEvent, this);
 				model.isNew && batch && created.add(model);
-			}
+			} else debugger
 			
 			if (!opts || !opts.silent) this.emit(model.ctor, "add", {model: model});
 			

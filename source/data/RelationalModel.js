@@ -1,10 +1,10 @@
 (function (enyo) {
 	var kind = enyo.kind
 		, clone = enyo.clone
-		, isObject = enyo.isObject
-		, isString = enyo.isString
-		, isFunction = enyo.isFunction
-		, isArray = enyo.isArray
+		// , isObject = enyo.isObject
+		// , isString = enyo.isString
+		// , isFunction = enyo.isFunction
+		// , isArray = enyo.isArray
 		// , forEach = enyo.forEach
 		// , where = enyo.where
 		, mixin = enyo.mixin
@@ -184,8 +184,8 @@
 				, model = this.model
 				, related = exists(this.related)? this.related: inst.attributes[key];
 			
-			isString(collection) && (collection = getPath(collection));
-			isString(model) && (model = constructorForKind(model));
+			typeof collection == "string" && (collection = getPath(collection));
+			typeof model == "string" && (model = constructorForKind(model));
 			
 			// if the model property is used for the collection constructor then we
 			// use the model of this collection
@@ -273,7 +273,8 @@
 				, found;
 			
 			if (inverseKey) {
-				found = store.findLocal(ctor, this.checkRelation, this);
+				found = store.findLocal(ctor, this.checkRelation, this, {all: true});
+				debugger
 				
 				// we shouldn't need to update any records already present so we'll ignore
 				// duplicates for efficiency
@@ -324,10 +325,10 @@
 			var iJson = this.includeInJSON
 				, raw;
 			if (iJson === true) raw = this.related.raw();
-			else if (isString(iJson)) raw = this.related.map(function (model) {
+			else if (typeof iJson == "string") raw = this.related.map(function (model) {
 				return model.get(iJson);
 			});
-			else if (isArray(iJson)) raw = this.related.map(function (model) {
+			else if (iJson instanceof Array) raw = this.related.map(function (model) {
 				return only(iJson, model.raw());
 			});
 			else if (typeof iJson == "function") raw = iJson.call(this.instance, this.key, this);
@@ -392,8 +393,8 @@
 				, modelOpts = this.modelOptions
 				, related = exists(this.related)? this.related: inst.attributes[key];
 				
-			isString(model) && (model = constructorForKind(model));
-			isString(inverseType) && (inverseType = constructorForKind(inverseType));
+			typeof model == "string" && (model = constructorForKind(model));
+			typeof inverseType == "string" && (inverseType = constructorForKind(inverseType));
 			
 			// ensure we have the correct model constructor
 			this.model = model;
@@ -404,7 +405,7 @@
 				if (create) {
 					model = new model(null, null, modelOpts);
 					exists(related) && parse && (related = model.parse(related));
-					related && isObject(related)? model.set(related): model.set(model.primaryKey, related);
+					related && typeof related == "object"? model.set(related): model.set(model.primaryKey, related);
 					this.related = model;
 					model = this.model;
 				} else {
@@ -544,8 +545,8 @@
 			var iJson = this.includeInJSON
 				, raw;
 			if (iJson === true) raw = this.related.raw();
-			else if (isString(iJson)) raw = this.related.get(iJson);
-			else if (isArray(iJson)) raw = only(iJson, this.related.raw());
+			else if (typeof iJson == "string") raw = this.related.get(iJson);
+			else if (iJson instanceof Array) raw = only(iJson, this.related.raw());
 			else if (typeof iJson == "function") raw = iJson.call(this.instance, this.key, this);
 			return raw;
 		},
@@ -808,7 +809,7 @@
 			var type = relation.type;
 			
 			if (!(type === enyo.toMany) && !(type === enyo.toOne)) {
-				relation.type = isString(type)? constructorForKind(enyo[type] || type): enyo.toOne;
+				relation.type = typeof type == "string"? constructorForKind(enyo[type] || type): enyo.toOne;
 			}
 		});
 		

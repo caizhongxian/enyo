@@ -211,7 +211,7 @@
 				removed.length && this.remove(removed, options);
 			}
 			
-			added && loc.add(added, idx);
+			added && loc.stopNotifications().add(added, idx).startNotifications();
 			added && sort && this.sort(sort, {silent: true});
 			// this.length = loc.length;
 			
