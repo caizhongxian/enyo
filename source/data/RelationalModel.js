@@ -330,7 +330,7 @@
 			else if (isArray(iJson)) raw = this.related.map(function (model) {
 				return only(iJson, model.raw());
 			});
-			else if (isFunction(iJson)) raw = iJson.call(this.instance, this.key, this);
+			else if (typeof iJson == "function") raw = iJson.call(this.instance, this.key, this);
 			return raw;
 		},
 		
@@ -546,7 +546,7 @@
 			if (iJson === true) raw = this.related.raw();
 			else if (isString(iJson)) raw = this.related.get(iJson);
 			else if (isArray(iJson)) raw = only(iJson, this.related.raw());
-			else if (isFunction(iJson)) raw = iJson.call(this.instance, this.key, this);
+			else if (typeof iJson == "function") raw = iJson.call(this.instance, this.key, this);
 			return raw;
 		},
 		
@@ -725,7 +725,7 @@
 				var rel = this.isRelation(key)
 					, ent = rel? rel.getRelated(): this.get(key);
 				if (!rel) {
-					if (isFunction(ent)) ent.call(this);
+					if (typeof ent == "function") ent.call(this);
 					else if (ent && ent.raw) cpy[key] = ent.raw();
 					else cpy[key] = ent;
 				} else {
