@@ -158,7 +158,12 @@
 					attrs = model;
 				}
 				
-				id = attrs? attrs[pkey]: model;
+				if (typeof attrs == "string" || typeof attrs == "number") {
+					id = attrs;
+					attrs = {};
+					attrs[pkey] = id;
+				} else id = attrs? attrs[pkey]: model;
+					
 				
 				// see if we have an existing entry for this model/hash
 				found = loc.has(id);
@@ -188,7 +193,7 @@
 					added || (added = []);
 					added.push(found);
 					this.prepareModel(found, opts);
-					found.set(attrs, opts);
+					merge && found.set(attrs, opts);
 				} else if (!attrs) {
 					added || (added = []);
 					added.push(model);

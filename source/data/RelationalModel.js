@@ -55,7 +55,7 @@
 		
 		/**
 		*/
-		autoFetch: false,
+		fetch: false,
 		
 		/**
 		*/
@@ -144,6 +144,14 @@
 		}
 	});
 	
+	Relation.concat = function (ctor, props) {
+		var proto = ctor.prototype;
+		if (props.options) {
+			proto.options = mixin({}, [proto.options, props.options]);
+			delete props.options;
+		}
+	};
+	
 	/**
 		@public
 		@class enyo.toMany
@@ -175,11 +183,11 @@
 			var inst = this.instance
 				, key = this.key
 				, isOwner = this.isOwner
-				, autoFetch = this.autoFetch
+				, fetch = this.fetch
 				, parse = this.parse
 				, inverseKey = this.inverseKey
 				, collection = this.collection
-				, collectionOpts = this.collectionOptions
+				, collectionOpts = this.collectionOptions? clone(this.collectionOptions): {}
 				, create = this.create
 				, model = this.model
 				, related = exists(this.related)? this.related: inst.attributes[key];
@@ -194,6 +202,7 @@
 				model = collection.prototype.model;
 			}
 			if (!model) model = collection.prototype.model;
+			else collectionOpts.model = collectionOpts.model || model;
 			
 			if (!model || !collection) {
 				return enyo.error("Cannot resolve defined relation for " + inst.kindName + " with key " + key +
@@ -201,7 +210,7 @@
 			} else {
 				this.collection = collection instanceof Collection? collection.ctor: collection;
 				this.model = model;
-				collection = collection instanceof Collection? collection: new collection(collectionOpts);
+				collection = collection instanceof Collection? mixin(collection, collectionOpts): new collection(collectionOpts);
 			}
 			
 			// special overload of store allows us to more narrowly listen to particular events
@@ -213,14 +222,16 @@
 			// create means we assume all data fetching will be done arbitrarily and we will not
 			// be fetching separately from the owner
 			if (create) {
-				exists(related) && parse && (related = collection.parse(related));
-				// we can avoid subsequent exists call because it needs to be an object
-				related && collection.add(related);
+				if (exists(related)) {
+					parse && (related = collection.parse(related));
+					// we can avoid subsequent exists call because it needs to be an object
+					typeof related == "object" && collection.add(related);
+				}
 			} else {
 				
-				// if the autoFetch flag is truthy we will execute the (assumably) asynchronous
+				// if the fetch flag is truthy we will execute the (assumably) asynchronous
 				// request now ensuring we pass in any options that might have been available
-				if (autoFetch) this.fetchRelated();
+				if (fetch) this.fetchRelated();
 			}
 			
 			inst.attributes[key] = this;
@@ -232,7 +243,7 @@
 			// ensure we store our related collection now
 			this.related = collection;
 			// we need to look for related models
-			this.findRelated();
+			// this.findRelated();
 		},
 		
 		/**
@@ -247,17 +258,9 @@
 			@private
 			@method
 		*/
-		setRelated: inherit(function (sup) {
-			return function (related) {
-				// this should be safe because all models should pass this test
-				// and we've already scoped the reference to the constructor for
-				// quicker lookup
-				if (related && related instanceof Model) {
-					this.related.add(related);
-					return this.related;
-				} else return sup.apply(this, arguments);
-			};
-		}),
+		setRelated: function (related) {
+			
+		},
 		
 		/**
 			@public
@@ -274,7 +277,6 @@
 			
 			if (inverseKey) {
 				found = store.findLocal(ctor, this.checkRelation, this, {all: true});
-				debugger
 				
 				// we shouldn't need to update any records already present so we'll ignore
 				// duplicates for efficiency
@@ -362,6 +364,66 @@
 		})
 	});
 	
+	enyo.toMany.concat = function (ctor, props) {
+		var proto = ctor.prototype;
+		if (props.collectionOptions) {
+			proto.collectionOptions = mixin({}, [proto.collectionOptions, props.collectionOptions]);
+			delete props.collectionOptions;
+		}
+	}
+	
+	/**
+		@public
+		@class enyo.manyToMany
+	*/
+	kind(
+		/** @lends enyo.manyToMany.prototype */ {
+		name: "enyo.manyToMany",
+		kind: enyo.toMany,
+		noDefer: true,
+		
+		options: {
+			inverseType: "enyo.manyToMany",
+			isOwner: false
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		checkRelation: function (model) {
+			var ctor = this.model
+				, inst = this.instance
+				, key = this.key
+				, inverseKey = this.inverseKey
+				, related = inverseKey && model.get(inverseKey)
+				, rel = model.getRelation(inverseKey)
+				, id = inst.get(inst.primaryKey)
+				, isOwner = this.isOwner;
+				
+			if (exists(related) && (related.has(inst) || related.find(function (model) { return model.attributes[model.primaryKey] == id; }))) {
+				
+				// if the relation isn't found it probably wasn't defined and we need
+				// to automatically generate it based on what we know
+				if (!rel) model.relations.push((rel = new enyo.manyToMany(model, {
+					key: inverseKey,
+					inverseKey: key,
+					parse: false,
+					create: false,
+					isOwner: !isOwner,
+					model: ctor,
+					related: inst
+				})));
+				
+				// if (rel.related !== inst) rel.setRelated(inst);
+				// if (!rel.related.has(inst)) rel.related.add(inst);
+				return true;
+			}
+			
+			return false;
+		}
+	});
+	
 	/**
 		@public
 		@class enyo.toOne
@@ -384,7 +446,7 @@
 			var inst = this.instance
 				, key = this.key
 				, isOwner = this.isOwner
-				, autoFetch = this.autoFetch
+				, fetch = this.fetch
 				, parse = this.parse
 				, inverseKey = this.inverseKey
 				, inverseType = this.inverseType
@@ -808,7 +870,7 @@
 		props.relations && props.relations.forEach(function (relation) {
 			var type = relation.type;
 			
-			if (!(type === enyo.toMany) && !(type === enyo.toOne)) {
+			if (!(type === enyo.toMany) && !(type === enyo.toOne) && !(type === enyo.manyToMany)) {
 				relation.type = typeof type == "string"? constructorForKind(enyo[type] || type): enyo.toOne;
 			}
 		});
