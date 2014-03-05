@@ -213,12 +213,6 @@
 				collection = collection instanceof Collection? mixin(collection, collectionOpts): new collection(collectionOpts);
 			}
 			
-			// special overload of store allows us to more narrowly listen to particular events
-			// for associated kinds
-			// @NOTE: We only register for this if we have an inverseKey otherwise we have no
-			// way of knowing the reverse relationship
-			if (inverseKey) store.on(model, "add", this.onChange, this);
-			
 			// create means we assume all data fetching will be done arbitrarily and we will not
 			// be fetching separately from the owner
 			if (create) {
@@ -237,13 +231,20 @@
 			inst.attributes[key] = this;
 			
 			// we need to detect these changes to propagate them onward
-			collection.on("add", this.onChange, this);
-			collection.on("remove", this.onChange, this);
+			collection.on("*", this.onChange, this);
+			// collection.on("remove", this.onChange, this);
+			// collection.on("change", this.onChange, this);
 			
 			// ensure we store our related collection now
 			this.related = collection;
 			// we need to look for related models
 			// this.findRelated();
+		
+			// special overload of store allows us to more narrowly listen to particular events
+			// for associated kinds
+			// @NOTE: We only register for this if we have an inverseKey otherwise we have no
+			// way of knowing the reverse relationship
+			if (inverseKey) store.on(model, "add", this.onChange, this);
 		},
 		
 		/**
@@ -302,7 +303,7 @@
 				
 				// if the relation isn't found it probably wasn't defined and we need
 				// to automatically generate it based on what we know
-				if (!rel) model.relations.push((rel = new enyo.toOne(model, {
+				if (!rel && inverseKey) model.relations.push((rel = new enyo.toOne(model, {
 					key: inverseKey,
 					inverseKey: key,
 					parse: false,
@@ -343,6 +344,11 @@
 		*/
 		onChange: function (sender, e, props) {
 			// console.log("enyo.toMany.onChange: ", arguments);
+			
+			var inst = this.instance
+				, key = this.key
+				, related = this.related
+				, changed;
 			
 			if (sender === store) {
 				if (e == "add") {
@@ -400,7 +406,7 @@
 				, rel = model.getRelation(inverseKey)
 				, id = inst.get(inst.primaryKey)
 				, isOwner = this.isOwner;
-				
+			
 			if (exists(related) && (related.has(inst) || related.find(function (model) { return model.attributes[model.primaryKey] == id; }))) {
 				
 				// if the relation isn't found it probably wasn't defined and we need
@@ -421,7 +427,44 @@
 			}
 			
 			return false;
-		}
+		},
+		
+		onChange: inherit(function (sup) {
+			return function (sender, e, props) {
+				var related = this.related
+					, inst = this.instance
+					, inverseKey = this.inverseKey
+					, key = this.key
+					, changed, previous;
+				
+				if (sender === related && !this.isChanging) {
+				
+					this.isChanging = true;
+				
+					if (e == "change") {
+						if (this.checkRelation(props.model)) related.add(props.model);
+						else related.remove(props.model);
+					} else if (inverseKey && (e == "add" || e == "remove")) {
+						
+						props.models.forEach(function (model) {
+							model.get(inverseKey)[e](inst);
+						});
+					}
+					
+					changed = inst.changed || (inst.changed = {});
+					previous = inst.previuos || (inst.previous = {});
+					changed[key] = previous[key] = related;
+					inst.emit("change", changed);
+				
+					this.isChanging = false;
+				}
+				
+				// console.log(inst.euid, key, "onChange", sender === related? "related": "store", e, props);
+				// console.log(related.euid, key, e, props.model.changed);
+
+				else sup.apply(this, arguments);
+			};
+		})
 	});
 	
 	/**

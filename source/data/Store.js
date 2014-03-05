@@ -326,6 +326,8 @@
 		*/
 		constructor: inherit(function (sup) {
 			return function () {
+				this.euid = "store";
+				
 				sup.apply(this, arguments);
 				this.changed = new ModelList();
 				this.destroyed = new ModelList();
