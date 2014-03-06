@@ -437,9 +437,9 @@
 					, key = this.key
 					, changed, previous;
 				
-				if (sender === related /*&& !this.isChanging*/) {
+				if (sender === related && !this.isChanging) {
 				
-					// this.isChanging = true;
+					this.isChanging = true;
 				
 					if (e == "change") {
 						if (this.checkRelation(props.model)) related.add(props.model);
@@ -451,12 +451,12 @@
 						});
 					}
 					
-					// changed = inst.changed || (inst.changed = {});
-					// previous = inst.previuos || (inst.previous = {});
-					// changed[key] = previous[key] = related;
-					// inst.emit("change", changed);
+					changed = inst.changed || (inst.changed = {});
+					previous = inst.previuos || (inst.previous = {});
+					changed[key] = previous[key] = related;
+					inst.emit("change", changed);
 				
-					// this.isChanging = false;
+					this.isChanging = false;
 				}
 				
 				// console.log(inst.euid, key, "onChange", sender === related? "related": "store", e, props);

@@ -505,9 +505,9 @@
 			case "destroy":
 				this.remove(model);
 				break;
-			case "change":
-				this.emit("change", {model: model});
-				break;
+			// case "change":
+			// 	this.emit("change", {model: model});
+			// 	break;
 			}
 		},
 		
