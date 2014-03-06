@@ -52,7 +52,7 @@
 			parse: false,
 			create: true,
 			find: true,
-			sort: true,
+			sort: false,
 			commit: false,
 			
 			/**
@@ -505,9 +505,6 @@
 			case "destroy":
 				this.remove(model);
 				break;
-			// case "change":
-			// 	this.emit("change", {model: model});
-			// 	break;
 			}
 		},
 		
@@ -532,7 +529,7 @@
 				// opts = opts? (this.options = mixin({}, [this.options, opts])): this.options;
 				
 				// if properties were passed in but not a records array
-				props = recs && !isArray(recs)? recs: props;
+				props = recs && !(recs instanceof Array)? recs: props;
 				if (props === recs) recs = null;
 				// initialize our core records
 				// this.models = this.models || new ModelList();
@@ -560,7 +557,7 @@
 				
 				sup.call(this, props);
 				
-				isString(this.model) && (this.model = constructorForKind(this.model));
+				typeof this.model == "string" && (this.model = constructorForKind(this.model));
 				this.store = this.store || store;
 				recs && recs.length && this.add(recs, opts);
 			};

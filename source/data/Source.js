@@ -23,7 +23,7 @@
 			@method
 		*/
 		constructor: function (props) {
-			if (props) mixin(this, props);
+			if (props) this.importProps(props);
 			// automatic coersion of name removing prefix
 			this.name || (this.name = this.kindName.replace(/^(.*)\./, ""));
 			// now add to the global registry of sources
@@ -60,6 +60,13 @@
 		*/
 		find: function (ctor, opts) {
 			//
+		},
+		
+		/**
+			@public
+		*/
+		importProps: function (props) {
+			props && mixin(this, props);
 		},
 		
 		/**
