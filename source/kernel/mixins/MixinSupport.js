@@ -6,7 +6,10 @@
 		, isArray = enyo.isArray
 		, clone = enyo.clone
 		, indexOf = enyo.indexOf
-		, inherit = enyo.inherit;
+		, inherit = enyo.inherit
+		, getPath = enyo.getPath;
+	
+	enyo.concatenated.push("mixins");
 	
 	/**
 		Apply, with safeguards, a given mixin to an object.
@@ -16,7 +19,6 @@
 		var applied = proto._mixins? (proto._mixins = proto._mixins.slice()): (proto._mixins = [])
 			, name = isString(props)? props: props.name
 			, idx = indexOf(name, applied);
-			
 		if (idx < 0) {
 			name == props && (props = getPath(name));
 			// if we could not resolve the requested mixin (should never happen)

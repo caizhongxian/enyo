@@ -19,6 +19,8 @@
 	// var defaultConfig = {};
 	var ComputedSupport;
 	
+	enyo.concatenated.push("computed");
+	
 	/**
 		@private
 	*/
@@ -166,11 +168,11 @@
 		sup.call(this, ctor, props);
 	
 		// only matters if there are computed properties to manage
-		if (props.computed && !/*isFunction*/(typeof props.computed == "function")) {
+		if (props.computed) {
 			
 			var proto = ctor.prototype || ctor
-				, computed = proto._computed? clone(proto._computed): {}
-				, dependencies = proto._computedDependencies? clone(proto._computedDependencies): {};
+				, computed = proto._computed? Object.create(proto._computed): {}
+				, dependencies = proto._computedDependencies? Object.create(proto._computedDependencies): {};
 			
 			// if it hasn't already been applied we need to ensure that the prototype will
 			// actually have the computed support mixin present, it will not apply it more
@@ -194,13 +196,20 @@
 						// create a single entry now for the method/computed with all dependencies
 						tmp.push({method: name, path: deps, cached: conf? conf.cached: null});
 					}
+					
+					// note that we only do this one so even for a mixin that is evaluated several
+					// times this would only happen once
 					props.computed = tmp;
 				}());
 			}
 			
 			var addDependency = function (path, dep) {
 				// its really an inverse look at the original
-				(dependencies[path] || (dependencies[path] = [])).push(dep);
+				var deps;
+				
+				if (dependencies[path] && !dependencies.hasOwnProperty(path)) dependencies[path] = dependencies.path.slice();
+				deps = dependencies[path] || (dependencies[path] = []);
+				deps.push(dep);
 			};
 			
 			// now we handle the new computed properties the way we intended to
@@ -215,7 +224,7 @@
 			}
 			
 			// arg, free the key from the properties so it won't be applied later...
-			delete props.computed;
+			// delete props.computed;
 			// make sure to reassign the correct items to the prototype
 			proto._computed = computed;
 			proto._computedDependencies = dependencies;

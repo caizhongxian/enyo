@@ -550,6 +550,17 @@
 	// Object Functions
 	// ----------------------------------
 	
+	Object.create = Object.create || (function () {
+		var anon = function () {};
+		return function (obj) {
+			// in the polyfill we can't support the additional features so we are ignoring
+			// the extra parameters
+			if (!obj || obj === null || typeof obj != "object") throw "Object.create: Invalid parameter";
+			anon.prototype = obj;
+			return new anon();
+		};
+	})();
+	
 	Object.keys = Object.keys || function (obj) {
 		var results = [];
 		var hop = Object.prototype.hasOwnProperty;

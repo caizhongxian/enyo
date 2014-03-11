@@ -19,21 +19,30 @@
 	var ObserverChain = enyo.ObserverChain
 		, ObserverSupport;
 		
+	enyo.concatenated.push("observers");
+		
 	/**
 		@private
 	*/
 	function addObserver (path, fn, ctx, opts) {
 		
-		var observers = this.observers()
-			, priority, noChain;
+		var observers = this.getObservers()
+			, priority, noChain, entries;
 			
 		priority = opts && opts.priority;
 		noChain = opts && opts.noChain;
-		
-		(observers[path] || (observers[path] = []))[priority? "unshift": "push"]({
+
+		if (observers[path] && !observers.hasOwnProperty(path)) observers[path] = observers[path].slice();
+		entries = observers[path] || (observers[path] = []);
+		entries[priority? "unshift": "push"]({
 			method: fn,
 			ctx: ctx || this
 		});
+		
+		// (observers[path] || (observers[path] = []))[priority? "unshift": "push"]({
+		// 	method: fn,
+		// 	ctx: ctx || this
+		// });
 		
 		if (!noChain && path.indexOf(".") > 0) {
 			this.chains()[priority? "unshift": "push"](new ObserverChain(path, this));
@@ -46,7 +55,7 @@
 		@private
 	*/
 	function removeObserver (obj, path, fn, ctx) {
-		var observers = obj.observers(path)
+		var observers = obj.getObservers(path)
 			, chains = obj.chains()
 			, idx, chain;
 			
@@ -74,7 +83,7 @@
 	*/
 	function notifyObservers (obj, path, was, is, opts) {
 		if (obj.isObserving()) {
-			var observers = obj.observers(path);
+			var observers = obj.getObservers(path);
 			
 			if (observers && observers.length) for (var i=0, ln; (ln=observers[i]); ++i) {
 				if (typeof ln.method == "string") obj[ln.method](was, is, path, opts);
@@ -155,16 +164,20 @@
 			@public
 			@method
 		*/
-		observers: function (path) {
+		getObservers: function (path) {
 			var euid = this.euid || (this.euid = uid("o"))
 				, loc;
 				
+			// loc = observerTable[euid] || (observerTable[euid] = (
+			// 	this._observers? (function (obs) {
+			// 		var cpy = {};
+			// 		for (var key in obs) cpy[key] = obs[key].slice();
+			// 		return cpy;
+			// 	}(this._observers)): {}
+			// ));
+			
 			loc = observerTable[euid] || (observerTable[euid] = (
-				this._observers? (function (obs) {
-					var cpy = {};
-					for (var key in obs) cpy[key] = obs[key].slice();
-					return cpy;
-				}(this._observers)): {}
+				this._observers? Object.create(this._observers): {}
 			));
 			
 			return path? loc[path]: loc;
@@ -343,9 +356,9 @@
 		if (props === ObserverSupport) return;
 
 		var proto = ctor.prototype || ctor
-			, observers = proto._observers? clone(proto._observers): {}
+			, observers = proto._observers? Object.create(proto._observers): {}
 			, incoming = props.observers
-			, chains;
+			, chains = proto._observerChains && proto._observerChains.slice();
 			
 		if (incoming && !isArray(incoming)) {
 			(function () {
@@ -359,7 +372,9 @@
 				}
 				incoming = tmp;
 			}());
-		}
+			// we need to ensure we don't modify the fixed array of a mixin or reused object
+			// because it could wind up inadvertantly adding the same entry multiple times
+		} else if (incoming) incoming = incoming.slice();
 		
 		// this scan is required to figure out what auto-observers might be present
 		for (var key in props) {
@@ -370,11 +385,14 @@
 		}
 		
 		var addObserverEntry = function (path, method) {
+			var obs;
 			// we have to make sure that the path isn't a chain because if it is we add it
 			// to the chains instead
 			if (path.indexOf(".") > -1) (chains || (chains = [])).push({path: path, method: method});
 			else {
-				(observers[path] || (observers[path] = [])).push({method: method});
+				if (observers[path] && !observers.hasOwnProperty(path)) observers[path] = observers[path].slice();
+				obs = observers[path] || (observers[path] = []);
+				obs.push({method: method});
 			}
 		};
 		
@@ -385,7 +403,7 @@
 		});
 		
 		// we clear the key so it will not be added to the prototype
-		delete props.observers;
+		// delete props.observers;
 		// we update the properties to whatever their new values may be
 		proto._observers = observers;
 		proto._observerChains = chains;

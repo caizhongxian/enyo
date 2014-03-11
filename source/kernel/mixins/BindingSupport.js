@@ -9,6 +9,8 @@
 		, defaultBindingKind = enyo.defaultBindingKind
 		, constructorForKind = enyo.constructorForKind;
 	
+	enyo.concatenated.push("bindings");
+	
 	/**
 		@public
 		@mixin enyo.BindingSupport
