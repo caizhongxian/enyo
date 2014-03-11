@@ -227,13 +227,8 @@ enyo.kind({
 	removeComponent: function(inComponent) {
 		var name = inComponent.getName();
 		
-		// @TODO: Originally this delete the key but that is slow and potentially
-		// not necessary...
-		this.$[name] = null;
-		inComponent._public && (this[name] = null);
-		
-		// delete this.$[name];
-		// if (inComponent._public) delete this[name];
+		delete this.$[name];
+		if (inComponent._public) delete this[name];
 	},
 	//* @public
 	/**
@@ -241,14 +236,8 @@ enyo.kind({
 		hash into an array and returns the array.
 	*/
 	getComponents: function() {
-		var res = []
-			, name, component;
-			
-		for (name in this.$) {
-			component = this.$[name];
-			component && res.push(component);
-		}
-		
+		var res = [];
+		for (var name in this.$) res.push(this.$[name]);
 		return res;
 	},
 	//* @protected
