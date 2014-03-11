@@ -496,7 +496,8 @@
 				, create = this.create
 				, model = this.model
 				, modelOpts = this.modelOptions
-				, related = exists(this.related)? this.related: inst.attributes[key];
+				, related = exists(this.related)? this.related: inst.attributes[key]
+				, found;
 				
 			typeof model == "string" && (model = constructorForKind(model));
 			typeof inverseType == "string" && (inverseType = constructorForKind(inverseType));
@@ -507,7 +508,12 @@
 			this.inverseType = inverseType;
 			
 			if (isOwner) {
-				if (create) {
+				if (related && (typeof related == "string" || typeof related == "number")) {
+					found = store.findLocal(model, function (model) { return model.get("id") == related; }, {all: false});
+					if (found) this.related = found;
+				}
+				
+				if (create && !found) {
 					model = new model(null, null, modelOpts);
 					exists(related) && parse && (related = model.parse(related));
 					related && typeof related == "object"? model.set(related): model.set(model.primaryKey, related);
