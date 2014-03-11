@@ -392,7 +392,7 @@
 			else {
 				if (observers[path] && !observers.hasOwnProperty(path)) observers[path] = observers[path].slice();
 				obs = observers[path] || (observers[path] = []);
-				obs.push({method: method});
+				if (!obs.find(function (ln) { return ln.method == method; })) obs.push({method: method});
 			}
 		};
 		
