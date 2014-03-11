@@ -28,6 +28,8 @@
 			
 			name && applied.push(name);
 			
+			props = clone(props);
+			
 			// we need to temporarily move the constructor if it has one so it
 			// will override the correct method - this is a one-time permanent
 			// runtime operation so subsequent additions of the mixin don't require
@@ -53,8 +55,8 @@
 			var proto = ctor.prototype || ctor
 				, mixins = props.mixins;
 			
-			delete props.mixins;
-			delete proto.mixins;
+			// delete props.mixins;
+			// delete proto.mixins;
 			
 			proto._mixins && (proto._mixins = proto._mixins.slice());
 			forEach(mixins, function (ln) { apply(proto, ln); });
