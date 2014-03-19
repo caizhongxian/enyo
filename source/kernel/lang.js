@@ -613,7 +613,7 @@
 		for (var i=0, len=properties.length >>> 0; i<len; ++i) {
 			prop = properties[i];
 			
-			if (ignore && !object[prop]) continue;
+			if (ignore && (object[prop] === undefined || object[prop] === null)) continue;
 			ret[prop] = object[prop];
 		}
 		

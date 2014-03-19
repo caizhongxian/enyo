@@ -63,7 +63,8 @@
 			silent: false,
 			remote: false,
 			commit: false,
-			parse: false
+			parse: false,
+			fetch: false
 		},
 		
 		/**
@@ -137,6 +138,10 @@
 			options.success = function (res) {
 				this.previous = clone(this.attributes);
 				dit.onCommit(opts, res);
+				
+				if (opts && opts.success) {
+					opts.success(dit, res, opts);
+				}
 			};
 		
 			options.error = function (res) {
@@ -157,6 +162,10 @@
 				
 			options.success = function (res) {
 				dit.onFetch(res, opts);
+				
+				if (opts && opts.success) {
+					opts.success(dit, res, opts);
+				}
 			};
 			
 			options.error = function (res) {
@@ -287,6 +296,7 @@
 			var noAdd = opts.noAdd
 				, commit = opts.commit
 				, parse = opts.parse
+				, fetch = this.options.fetch
 				, defaults;
 
 			props && mixin(this, props);
@@ -314,6 +324,7 @@
 			if (!noAdd) this.store.add(this, opts);
 			
 			commit && this.commit();
+			fetch && this.fetch();
 		},
 		
 		/**
@@ -338,8 +349,11 @@
 			@private
 			@method
 		*/
-		onFetch: function () {
+		onFetch: function (res, opts) {
 			console.log("enyo.Model.onFetch", arguments);
+			
+			if (this.options.parse) res = this.parse(res);
+			this.set(res);
 		},
 		
 		/**

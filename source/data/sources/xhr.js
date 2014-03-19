@@ -30,7 +30,9 @@
 		/**
 			@public
 		*/
-		defaultOptions: {},
+		defaultOptions: {
+			cacheBust: false
+		},
 		
 		/**
 			@public
@@ -66,14 +68,19 @@
 		go: function (opts) {
 			var ctor = this.requestKind
 				, defaults = this.defaultOptions
-				, options = only(this.allowed, mixin({}, [defaults, opts]), true)
-				, xhr = new ctor(options);
+				, xhr, params, options;
 				
+			if (opts.params) {
+				params = defaults.params? mixin({}, [defaults.params, opts.params]): opts.params;
+			} else if (defaults.params) params = defaults.params;
+			
+			options = only(this.allowed, mixin({}, [defaults, opts]), true);
+			xhr = new ctor(options);
 			xhr.response(function (xhr, res) {
 				if (opts.success) opts.success(res, xhr);
 			});
 			xhr.error(opts.error);
-			xhr.go(opts.params);
+			xhr.go(params);
 		},
 		
 		/**

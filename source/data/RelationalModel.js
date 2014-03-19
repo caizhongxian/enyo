@@ -213,6 +213,9 @@
 				collection = collection instanceof Collection? mixin(collection, collectionOpts): new collection(collectionOpts);
 			}
 			
+			// ensure we have the correct parse value
+			this.parse = this.parse || model.prototype.options.parse;
+			
 			// create means we assume all data fetching will be done arbitrarily and we will not
 			// be fetching separately from the owner
 			if (create) {
@@ -259,8 +262,10 @@
 			@private
 			@method
 		*/
-		setRelated: function (related) {
+		setRelated: function (data) {
+			var related = this.related;
 			
+			related.add(data, {purge: true, parse: true});
 		},
 		
 		/**
@@ -802,6 +807,8 @@
 					if (curr && curr instanceof Relation) {
 						if(parts) curr.getRelated().set(parts.join("."), value, opts);
 						else curr.setRelated(value, opts);
+						changed || (changed = this.changed = {});
+						changed[key] = curr.getRelated();
 						continue;
 					}
 					
