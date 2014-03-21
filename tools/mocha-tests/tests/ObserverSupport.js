@@ -1,4 +1,4 @@
-describe ("Observer", function () {
+describe ("ObserverSupport Mixin", function () {
 	describe ("methods", function () {
 		describe ("#addObserver", function () {
 			var obj;
@@ -353,219 +353,221 @@ describe ("Observer", function () {
 		})
 	});
 	
-	describe ("declarative observers", function () {
-		describe ("array syntax", function () {
-			var ctor, obj;
+	describe ("Other", function () {
+		describe ("declarative observers", function () {
+			describe ("array syntax", function () {
+				var ctor, obj;
 			
+				ctor = enyo.kind({
+					kind: "enyo.Object",
+					testObserver1: function (was, is, prop) {
+						throw new Error("testObserver1" + prop);
+					},
+					testObserver2: function (was, is, prop) {
+						throw new Error("testObserver2" + prop);
+					},
+					observers: [
+						{method: "testObserver1", path: "testprop1"},
+						{method: "testObserver1", path: "testprop2"},
+						{method: "testObserver2", path: ["testprop1", "testprop3", "testprop4"]}
+					]
+				});
+			
+				beforeEach (function () {
+					obj = new ctor();
+				});
+			
+				afterEach (function () {
+					obj.destroy();
+				})
+			
+				it ("should be able to declare observers as an array", function () {
+					expect(ctor.prototype._observers).to.exist;
+					expect(ctor.prototype._observers).to.be.an("object");
+					expect(obj.getObservers()).to.be.an("object");
+				});
+			
+				it ("should be able to declare multiple dependent properties for the same observer method", function () {
+					expect(obj.getObservers("testprop1")).to.have.length(2);
+				});
+			
+				it ("should be able to declare multiple dependent properties in an array", function () {
+					expect(obj.getObservers("testprop1").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+					expect(obj.getObservers("testprop3").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+					expect(obj.getObservers("testprop4").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+				});
+			
+				it ("should respond properly to change notifications", function () {
+					var fn1, fn2;
+				
+					fn1 = function () {
+						obj.set("testprop2", true);
+					};
+				
+					fn2 = function () {
+						obj.set("testprop4", true);
+					};
+				
+					expect(fn1).to.throw("testObserver1testprop2");
+					expect(fn2).to.throw("testObserver2testprop4");
+				});
+			});
+		
+			describe ("object literal syntax (deprecated)", function () {
+				var ctor, obj;
+			
+				ctor = enyo.kind({
+					kind: "enyo.Object",
+					testObserver1: function (was, is, prop) {
+						throw new Error("testObserver1" + prop);
+					},
+					testObserver2: function (was, is, prop) {
+						throw new Error("testObserver2" + prop);
+					},
+					observers: {
+						testObserver1: ["testprop1", "testprop2"],
+						testObserver2: ["testprop1", "testprop3", "testprop4"]
+					}
+				});
+			
+				beforeEach (function () {
+					obj = new ctor();
+				});
+			
+				afterEach (function () {
+					obj.destroy();
+				});
+			
+				it ("should be able to declare observers as an object literal", function () {
+					expect(ctor.prototype._observers).to.exist;
+					expect(ctor.prototype._observers).to.be.an("object");
+					expect(obj.getObservers()).to.be.an("object");
+				});
+			
+				it ("should be able to declare the same dependent property for multiple observer methods", function () {
+					expect(obj.getObservers("testprop1")).to.have.length(2);
+				});
+			
+				it ("should be able to declare multiple dependent properties in an array", function () {
+					expect(obj.getObservers("testprop1").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+					expect(obj.getObservers("testprop3").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+					expect(obj.getObservers("testprop4").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
+				});
+			
+				it ("should respond properly to change notifications", function () {
+					var fn1, fn2;
+				
+					fn1 = function () {
+						obj.set("testprop2", true);
+					};
+				
+					fn2 = function () {
+						obj.set("testprop4", true);
+					};
+				
+					expect(fn1).to.throw("testObserver1testprop2");
+					expect(fn2).to.throw("testObserver2testprop4");
+				});
+			});
+		});
+	
+		describe ("chained observers", function () {
+			var ctor, obj;
+		
 			ctor = enyo.kind({
-				kind: "enyo.Object",
-				testObserver1: function (was, is, prop) {
-					throw new Error("testObserver1" + prop);
+				chainObserver: function (was, is, path) {
+					throw new Error(path);
 				},
-				testObserver2: function (was, is, prop) {
-					throw new Error("testObserver2" + prop);
+				chainValueInspector: function (was, is, path) {
+					expect(was).to.be.true;
+					expect(is).to.be.undefined;
+					expect(path).to.equal("broken.chain.path");
 				},
 				observers: [
-					{method: "testObserver1", path: "testprop1"},
-					{method: "testObserver1", path: "testprop2"},
-					{method: "testObserver2", path: ["testprop1", "testprop3", "testprop4"]}
-				]
-			});
-			
-			beforeEach (function () {
-				obj = new ctor();
-			});
-			
-			afterEach (function () {
-				obj.destroy();
-			})
-			
-			it ("should be able to declare observers as an array", function () {
-				expect(ctor.prototype._observers).to.exist;
-				expect(ctor.prototype._observers).to.be.an("object");
-				expect(obj.getObservers()).to.be.an("object");
-			});
-			
-			it ("should be able to declare multiple dependent properties for the same observer method", function () {
-				expect(obj.getObservers("testprop1")).to.have.length(2);
-			});
-			
-			it ("should be able to declare multiple dependent properties in an array", function () {
-				expect(obj.getObservers("testprop1").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
-				expect(obj.getObservers("testprop3").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
-				expect(obj.getObservers("testprop4").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
-			});
-			
-			it ("should respond properly to change notifications", function () {
-				var fn1, fn2;
-				
-				fn1 = function () {
-					obj.set("testprop2", true);
-				};
-				
-				fn2 = function () {
-					obj.set("testprop4", true);
-				};
-				
-				expect(fn1).to.throw("testObserver1testprop2");
-				expect(fn2).to.throw("testObserver2testprop4");
-			});
-		});
-		
-		describe ("object literal syntax (deprecated)", function () {
-			var ctor, obj;
-			
-			ctor = enyo.kind({
-				kind: "enyo.Object",
-				testObserver1: function (was, is, prop) {
-					throw new Error("testObserver1" + prop);
-				},
-				testObserver2: function (was, is, prop) {
-					throw new Error("testObserver2" + prop);
-				},
-				observers: {
-					testObserver1: ["testprop1", "testprop2"],
-					testObserver2: ["testprop1", "testprop3", "testprop4"]
-				}
-			});
-			
-			beforeEach (function () {
-				obj = new ctor();
-			});
-			
-			afterEach (function () {
-				obj.destroy();
-			});
-			
-			it ("should be able to declare observers as an object literal", function () {
-				expect(ctor.prototype._observers).to.exist;
-				expect(ctor.prototype._observers).to.be.an("object");
-				expect(obj.getObservers()).to.be.an("object");
-			});
-			
-			it ("should be able to declare the same dependent property for multiple observer methods", function () {
-				expect(obj.getObservers("testprop1")).to.have.length(2);
-			});
-			
-			it ("should be able to declare multiple dependent properties in an array", function () {
-				expect(obj.getObservers("testprop1").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
-				expect(obj.getObservers("testprop3").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
-				expect(obj.getObservers("testprop4").find(function (ln) { return ln.method == "testObserver2"})).to.be.ok;
-			});
-			
-			it ("should respond properly to change notifications", function () {
-				var fn1, fn2;
-				
-				fn1 = function () {
-					obj.set("testprop2", true);
-				};
-				
-				fn2 = function () {
-					obj.set("testprop4", true);
-				};
-				
-				expect(fn1).to.throw("testObserver1testprop2");
-				expect(fn2).to.throw("testObserver2testprop4");
-			});
-		});
-	});
-	
-	describe ("chained observers", function () {
-		var ctor, obj;
-		
-		ctor = enyo.kind({
-			chainObserver: function (was, is, path) {
-				throw new Error(path);
-			},
-			chainValueInspector: function (was, is, path) {
-				expect(was).to.be.true;
-				expect(is).to.be.undefined;
-				expect(path).to.equal("broken.chain.path");
-			},
-			observers: [
-				{method: "chainObserver", path: "some.nested.property"},
-				{method: "chainValueInspector", path: "broken.chain.path"}
-			],
-			some: new enyo.Object({
-				nested: new enyo.Object({
-					property: true
-				})
-			}),
-			broken: new enyo.Object({
-				chain: new enyo.Object({
-					path: true
-				})
-			})
-		});
-		
-		beforeEach (function () {
-			obj = new ctor();
-		});
-		
-		afterEach (function () {
-			obj.destroy();
-		});
-		
-		it ("should work with declarative observers", function () {
-			var fn = function () {
-				obj.set("some.nested.property", false);
-			};
-			
-			expect(fn).to.throw("some.nested.property");
-			expect(obj.get("some.nested.property")).to.be.false;
-		});
-		
-		it ("should work with registered observers", function () {
-			var path, fn;
-			
-			obj.observe("another.chained.moreLengthy.path", function (was, is, path) {
-				throw new Error(path);
-			});
-			
-			path = new enyo.Object({
-				chained: new enyo.Object({
-					moreLengthy: new enyo.Object({
+					{method: "chainObserver", path: "some.nested.property"},
+					{method: "chainValueInspector", path: "broken.chain.path"}
+				],
+				some: new enyo.Object({
+					nested: new enyo.Object({
+						property: true
+					})
+				}),
+				broken: new enyo.Object({
+					chain: new enyo.Object({
 						path: true
 					})
 				})
 			});
-			
-			fn = function () {
-				obj.set("another", path);
-			};
-			
-			expect(fn).to.throw("another.chained.moreLengthy.path");
-			expect(obj.get("another.chained.moreLengthy.path")).to.be.true;
-		});
 		
-		it ("should supply an undefined when the chain is broken", function () {
-			obj.set("broken", null);
-		});
-		
-		it ("should report the correct, new value when a section of the chain is replaced indirectly", function () {
-			// haha, that wasn't intentional but it's staying
-			var some = obj.get("some")
-				, fn, repl;
-			repl = new enyo.Object({
-				property: "now it's a string"
+			beforeEach (function () {
+				obj = new ctor();
 			});
-			
-			fn = function () {
-				some.set("nested", repl);
-			};
-			
-			expect(fn).to.throw("some.nested.property");
-			expect(obj.get("some.nested.property")).to.equal("now it's a string");
-		});
 		
-		it ("should destroy all chains when an object is destroyed", function () {
-			var chains = obj.chains();
-			expect(chains).to.be.an("array").and.have.length(2);
-			obj.destroy();
-			enyo.forEach(chains, function (chain) {
-				expect(chain.destroyed).to.be.true;
-				expect(chain).to.have.length(0);
-				expect(chain.head).to.equal(chain.tail).and.to.be.null;
+			afterEach (function () {
+				obj.destroy();
+			});
+		
+			it ("should work with declarative observers", function () {
+				var fn = function () {
+					obj.set("some.nested.property", false);
+				};
+			
+				expect(fn).to.throw("some.nested.property");
+				expect(obj.get("some.nested.property")).to.be.false;
+			});
+		
+			it ("should work with registered observers", function () {
+				var path, fn;
+			
+				obj.observe("another.chained.moreLengthy.path", function (was, is, path) {
+					throw new Error(path);
+				});
+			
+				path = new enyo.Object({
+					chained: new enyo.Object({
+						moreLengthy: new enyo.Object({
+							path: true
+						})
+					})
+				});
+			
+				fn = function () {
+					obj.set("another", path);
+				};
+			
+				expect(fn).to.throw("another.chained.moreLengthy.path");
+				expect(obj.get("another.chained.moreLengthy.path")).to.be.true;
+			});
+		
+			it ("should supply an undefined when the chain is broken", function () {
+				obj.set("broken", null);
+			});
+		
+			it ("should report the correct, new value when a section of the chain is replaced indirectly", function () {
+				// haha, that wasn't intentional but it's staying
+				var some = obj.get("some")
+					, fn, repl;
+				repl = new enyo.Object({
+					property: "now it's a string"
+				});
+			
+				fn = function () {
+					some.set("nested", repl);
+				};
+			
+				expect(fn).to.throw("some.nested.property");
+				expect(obj.get("some.nested.property")).to.equal("now it's a string");
+			});
+		
+			it ("should destroy all chains when an object is destroyed", function () {
+				var chains = obj.chains();
+				expect(chains).to.be.an("array").and.have.length(2);
+				obj.destroy();
+				enyo.forEach(chains, function (chain) {
+					expect(chain.destroyed).to.be.true;
+					expect(chain).to.have.length(0);
+					expect(chain.head).to.equal(chain.tail).and.to.be.null;
+				});
 			});
 		});
 	});
