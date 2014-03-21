@@ -674,6 +674,7 @@
 		onChange: function (sender, e, props) {
 			var key = this.key
 				, inst = this.instance
+				, isOwner = this.isOwner
 				, changed;
 			
 			// console.log("enyo.toOne.onChange", arguments);
@@ -685,7 +686,7 @@
 					}
 				}
 			} else if (sender === this.related) {
-				if (e == "change") {
+				if (e == "change" && isOwner) {
 					// @TODO: This is a questionable way to handle this particular type of event chaining
 					// it is possible it would be better to re-create the string/paths to be relative to
 					// the instance not another nested object this way
@@ -807,8 +808,10 @@
 					if (curr && curr instanceof Relation) {
 						if(parts) curr.getRelated().set(parts.join("."), value, opts);
 						else curr.setRelated(value, opts);
-						changed || (changed = this.changed = {});
-						changed[key] = curr.getRelated();
+						if (curr.isOwner) {
+							changed || (changed = this.changed = {});
+							changed[key] = curr.getRelated();
+						}
 						continue;
 					}
 					
