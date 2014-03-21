@@ -51,7 +51,7 @@
 		
 		/**
 		*/
-		queueDelay: 30,
+		queueDelay: 15,
 		
 		/**
 		*/
@@ -178,7 +178,7 @@
 			@method
 		*/
 		add: function (model, opts, sync) {
-			
+			if (model.destroyed) return this;
 			if (!sync) return this._modelQueue("add", model, opts);
 			
 			// @TODO: It should be possible to have a mechanism that delays this
@@ -207,7 +207,6 @@
 			@method
 		*/
 		remove: function (model, sync) {
-			
 			if (!sync) return this._modelQueue("remove", model);
 			
 			var models = this.models[model.kindName]
@@ -255,7 +254,7 @@
 			
 			switch (e) {
 			case "destroy":
-				this.remove(model);
+				this.remove(model, model.options.syncStore);
 				break;
 			case "change":
 				// @TODO: PrimaryKey/id change..
@@ -372,7 +371,7 @@
 			@method
 		*/
 		_tripQueue: function () {
-			!this._queueId && (this._queueId = setTimeout(this._flushQueue.bind(this), this.queueDelay || 30));
+			!this._queueId && (this._queueId = setTimeout(this._flushQueue.bind(this), this.queueDelay || 15));
 		},
 		
 		/**
@@ -394,7 +393,7 @@
 				});
 				
 				queue.remove.forEach(function (ln) {
-					dit.remove(ln.model, true);
+					dit.remove(ln, true);
 				});
 				
 				// if somehow during this operation more models were queued

@@ -192,6 +192,9 @@
 				return this;
 			}
 			
+			// setting this value explicitly will override the default option that may/may-not have been set
+			if (opts && (opts.syncStore === false || opts.syncStore === true)) this.options.syncStore = opts.syncStore;
+			
 			// we flag this early so objects that receive an event and process it
 			// can optionally check this to support faster cleanup in some cases
 			// e.g. Collection/Store don't need to remove listeners because it will
@@ -200,10 +203,10 @@
 			this.unsilence(true).emit("destroy");
 			this.removeAllListeners();
 			this.removeAllObservers();
-			this.attributes = null;
-			this.previous = null;
-			this.changed = null;
-			this.store = null;
+			// this.attributes = null;
+			// this.previous = null;
+			// this.changed = null;
+			// this.store = null;
 			return this;
 		},
 		
@@ -294,6 +297,7 @@
 			opts = opts? mixin({}, [this.options, opts]): this.options;
 			
 			var noAdd = opts.noAdd
+				, syncStore = opts.syncStore
 				, commit = opts.commit
 				, parse = opts.parse
 				, fetch = this.options.fetch
@@ -321,7 +325,7 @@
 			// @TODO: The idea here is that when batch instancing records a collection
 			// should be intelligent enough to avoid doing each individually or in some
 			// cases it may be useful to have a record that is never added to a store?
-			if (!noAdd) this.store.add(this, opts);
+			if (!noAdd) this.store.add(this, opts, syncStore);
 			
 			commit && this.commit();
 			fetch && this.fetch();

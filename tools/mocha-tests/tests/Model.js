@@ -64,10 +64,10 @@ describe ("Model", function () {
 			
 			it ("should remove the model from the store", function () {
 				var len = enyo.store.models["enyo.Model"].length;
-				model = new enyo.Model();
+				model = new enyo.Model(null, {options: {syncStore: true}});
 				expect(enyo.store.models["enyo.Model"].length).to.be.above(len);
 				model.destroy();
-				expect(enyo.store.models["enyo.Model"].length).to.be.equal(len);
+				expect(enyo.store.models["enyo.Model"].has(model)).to.not.be.ok;
 			});
 			it ("should remove all listeners", function () {
 				model = new enyo.Model();
@@ -157,7 +157,8 @@ describe ("Model", function () {
 			var len = enyo.store.models["enyo.Model"].length;
 			ctor = enyo.kind({kind: "enyo.Model"});
 			model = new ctor();
-			expect(enyo.store.models["enyo.Model"].length).to.equal(len+1);
+			enyo.store._flushQueue();
+			expect(enyo.store.models["enyo.Model"].length).to.at.least(len+1);
 			enyo.store.models["enyo.Model"].remove(model);
 		});
 	});

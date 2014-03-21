@@ -874,7 +874,7 @@
 				opts.noAdd = true;
 				sup.call(this, attrs, props, opts);
 				this.initRelations();
-				this.store.add(this, opts);
+				this.store.add(this, opts, opts.syncStore);
 			};
 		}),
 		
