@@ -339,7 +339,7 @@
 			if (next.prototype) next = enyo.checkConstructor(next);
 			// for the auto generated or provided published property support we have separate
 			// routines that must be called to preserve compatibility
-			if (next._getters && (getter = next._getters[part])) next = next[getter]();
+			if (next._getters && ((getter = next._getters[part])) && !getter.generated) next = next[getter]();
 			// for all other special cases to ensure we use any overloaded getter methods
 			else if (next.get && next !== this && next.get !== getPath) next = next.get(part);
 			// and for regular cases
