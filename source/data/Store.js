@@ -51,6 +51,10 @@
 		
 		/**
 		*/
+		queueDelay: 30,
+		
+		/**
+		*/
 		computed: [
 			{method: "changeset"}
 		],
@@ -173,7 +177,10 @@
 			@private
 			@method
 		*/
-		add: function (model, opts) {
+		add: function (model, opts, sync) {
+			
+			if (!sync) return this._modelQueue("add", model, opts);
+			
 			// @TODO: It should be possible to have a mechanism that delays this
 			// work until a timer runs out (that is reset as long as add is continuing
 			// to be called) and then flushes when possible unless a synchronous flush
@@ -199,7 +206,9 @@
 			@private
 			@method
 		*/
-		remove: function (model) {
+		remove: function (model, sync) {
+			
+			if (!sync) return this._modelQueue("remove", model);
 			
 			var models = this.models[model.kindName]
 				, len = models.length
@@ -225,7 +234,7 @@
 			@method
 		*/
 		has: function (ctor, model) {
-			var models = this.models[ctor.prototype.kindName];
+			var models = this._flushQueue().models[ctor.prototype.kindName];
 			return models && models.has(model);
 		},
 		
@@ -259,6 +268,8 @@
 			@method
 		*/
 		remote: function (action, model, opts) {
+			this._flushQueue();
+			
 			var source = opts.source || model.source
 				, name;
 			
@@ -282,7 +293,7 @@
 			@method
 		*/
 		find: function () {
-			
+			this._flushQueue();
 		},
 		
 		/**
@@ -290,6 +301,8 @@
 			@method
 		*/
 		findLocal: function (ctor, fn, ctx, opts) {
+			this._flushQueue();
+			
 			var models = this.models[ctor.prototype.kindName]
 				, options = {all: true}
 				, found, method, ctx;
@@ -338,7 +351,61 @@
 				// the listeners
 				this._scopeListeners = [];
 			};
-		})
+		}),
+		
+		/**
+			@private
+			@method
+		*/
+		_modelQueue: function (action, model, opts) {
+			var queue = this._queue || (this._queue = {add: [], remove: []});
+			
+			queue[action].push(action == "add"? {model: model, opts: opts}: model);
+			
+			!this._flushing && this._tripQueue();
+			
+			return this;
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		_tripQueue: function () {
+			!this._queueId && (this._queueId = setTimeout(this._flushQueue.bind(this), this.queueDelay || 30));
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		_flushQueue: function () {
+			var queue = this._queue
+				, dit = this;
+			
+			this._flushing = true;			
+			if (queue) {
+				clearTimeout(this._queueId);
+				
+				this._queue = this._queueId = null;
+				
+				queue.add.forEach(function (ln) {
+					dit.add(ln.model, ln.opts, true);
+				});
+				
+				queue.remove.forEach(function (ln) {
+					dit.remove(ln.model, true);
+				});
+				
+				// if somehow during this operation more models were queued
+				// we trip the queue timeout if necessary
+				this._tripQueue();
+			}
+			
+			this._flushing = false;
+			
+			return this;
+		}
 	});
 	
 	enyo.store = new Store();
