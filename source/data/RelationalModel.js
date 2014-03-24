@@ -278,15 +278,16 @@
 				, inverseKey = this.inverseKey
 				, isOwner = this.isOwner
 				, inst = this.instance
-				, id = inst.get(inst.primaryKey)
-				, found;
+				, id = inst.get(inst.primaryKey);
 			
 			if (inverseKey) {
-				found = store.findLocal(ctor, this.checkRelation, this, {all: true});
+				// found = store.findLocal(ctor, this.checkRelation, this, {all: true});
+				store.findLocal(ctor, this.checkRelation, this, {all: true}, function (found) {
 				
-				// we shouldn't need to update any records already present so we'll ignore
-				// duplicates for efficiency
-				if (found.length) related.add(found, {merge: false});
+					// we shouldn't need to update any records already present so we'll ignore
+					// duplicates for efficiency
+					if (found.length) related.add(found, {merge: false});
+				});
 			}
 		},
 		
@@ -492,6 +493,7 @@
 		*/
 		init: function () {
 			var inst = this.instance
+				, dit = this
 				, key = this.key
 				, isOwner = this.isOwner
 				, fetch = this.fetch
@@ -501,8 +503,7 @@
 				, create = this.create
 				, model = this.model
 				, modelOpts = this.modelOptions
-				, related = exists(this.related)? this.related: inst.attributes[key]
-				, found;
+				, related = exists(this.related)? this.related: inst.attributes[key];
 				
 			typeof model == "string" && (model = constructorForKind(model));
 			typeof inverseType == "string" && (inverseType = constructorForKind(inverseType));
@@ -514,21 +515,23 @@
 			
 			if (isOwner) {
 				if (related && (typeof related == "string" || typeof related == "number")) {
-					found = store.findLocal(model, function (model) { return model.get("id") == related; }, {all: false});
-					if (found) this.related = found;
-				}
+					// found = store.findLocal(model, function (model) { return model.get("id") == related; }, {all: false});
+					store.findLocal(model, function (model) { return model.get("id") == related; }, {all: false}, function (found) {
+						if (found) this.related = found;
 				
-				if (create && !found) {
-					model = new model(null, null, modelOpts);
-					exists(related) && parse && (related = model.parse(related));
-					related && typeof related == "object"? model.set(related): model.set(model.primaryKey, related);
-					this.related = model;
-					model = this.model;
-				} else {
+						if (create && !found) {
+							model = new model(null, null, modelOpts);
+							exists(related) && parse && (related = model.parse(related));
+							related && typeof related == "object"? model.set(related): model.set(model.primaryKey, related);
+							dit.related = model;
+							model = dit.model;
+						} else {
 					
-					// in cases where we are the owner but aren't supposed to create the
-					// other end of the relation we wait for it to appear
-					store.on(model, this.onChange, this);
+							// in cases where we are the owner but aren't supposed to create the
+							// other end of the relation we wait for it to appear
+							store.on(model, dit.onChange, dit);
+						}
+					});
 				}
 			}
 			// ensure that the property points to us as the value
@@ -559,10 +562,12 @@
 					// an instance may be disappointed (e.g. break, die, suicide, self-destruct...)
 					else {
 						this.related = related;
-						related = this.findRelated();
-						// if it was found by this new value somehow we allow the original
-						// set to take place so it will notify everyone
-						related && related instanceof Model && sup.call(this, related);
+						// related = this.findRelated();
+						this.findRelated(function (related) {
+							// if it was found by this new value somehow we allow the original
+							// set to take place so it will notify everyone
+							related && related instanceof Model && sup.call(this, related);
+						});
 					}
 				}
 				
@@ -584,8 +589,9 @@
 			@public
 			@method
 		*/
-		findRelated: function () {
+		findRelated: function (cb) {
 			var related = this.related
+				, dit = this
 				, inst = this.instance
 				, ctor = this.model
 				, key = this.key
@@ -593,52 +599,55 @@
 				, inverseType = this.inverseType
 				, isOwner = this.isOwner
 				, found, rel;
+				
+			var fn = function (found) {
+				if (found) {
+					// remove our listener on the store if it's there because
+					// we don't need it anymore
+					isOwner && store.off(ctor, this.onChange, this);
+					// we also establish this found entity as our related model
+					dit.related = found;
+					// we try and establish the relation when possible
+					if (inverseKey) {
+						rel = found.getRelation(inverseKey);
+				
+						if (!rel) found.relations.push((rel = new inverseType(found, {
+							isOwner: !isOwner,
+							key: inverseKey,
+							inverseKey: key,
+							parse: false,
+							create: false,
+							model: inst.ctor,
+							related: inst
+						})));
+				
+						switch (rel.kindName) {
+						case "enyo.toOne":
+							if (rel.related !== inst) rel.setRelated(inst);
+							break;
+						case "enyo.toMany":
+							// its unfortunate but we will allow this to attempt the add to avoid the
+							// double lookup hit - if it is already present on the next pass (via the
+							// store's add event) it will do hardly anything
+							rel.related.add(inst, {merge: false});
+							break;
+						}
+					}
+				
+					if (isOwner) found.on("change", this.onChange, this);
+					
+					if (cb) cb(found);
+				}
+			};
+						
 			if (related && related instanceof ctor) {
-				found = related;
+				fn(related);
 			} else if (exists(related) || inverseKey) {
 				
 				// in cases where some value of some sort was supplied to try loose comparison
 				// for euid and primaryKey to find it in the store
-				found = store.findLocal(ctor, this.checkRelation, this, {all: false});
+				store.findLocal(ctor, this.checkRelation, this, {all: false}, fn);
 			}
-			
-			if (found) {
-				// remove our listener on the store if it's there because
-				// we don't need it anymore
-				isOwner && store.off(ctor, this.onChange, this);
-				// we also establish this found entity as our related model
-				this.related = found;
-				// we try and establish the relation when possible
-				if (inverseKey) {
-					rel = found.getRelation(inverseKey);
-				
-					if (!rel) found.relations.push((rel = new inverseType(found, {
-						isOwner: !isOwner,
-						key: inverseKey,
-						inverseKey: key,
-						parse: false,
-						create: false,
-						model: inst.ctor,
-						related: inst
-					})));
-				
-					switch (rel.kindName) {
-					case "enyo.toOne":
-						if (rel.related !== inst) rel.setRelated(inst);
-						break;
-					case "enyo.toMany":
-						// its unfortunate but we will allow this to attempt the add to avoid the
-						// double lookup hit - if it is already present on the next pass (via the
-						// store's add event) it will do hardly anything
-						rel.related.add(inst, {merge: false});
-						break;
-					}
-				}
-				
-				if (isOwner) found.on("change", this.onChange, this);
-			}
-			
-			return found;
 		},
 		
 		/**
