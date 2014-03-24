@@ -149,7 +149,7 @@
 			for (var i=0, end=models.length; i<end; ++i) {
 				model = models[i];
 				
-				if (!model) continue;
+				if (!model && isNaN(model)) continue;
 				
 				// first determine if the model is an instance of model since
 				// everything else hinges on this
