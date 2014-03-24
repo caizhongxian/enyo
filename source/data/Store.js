@@ -31,44 +31,7 @@
 		
 		/**
 		*/
-		batch: false,
-		
-		/**
-		*/
-		isDirty: false,
-		
-		/**
-		*/
-		changed: null,
-		
-		/**
-		*/
-		destroyed: null,
-		
-		/**
-		*/
-		created: null,
-		
-		/**
-		*/
 		queueDelay: 15,
-		
-		/**
-		*/
-		computed: [
-			{method: "changeset"}
-		],
-		
-		/**
-			@public
-		*/
-		changeset: function () {
-			return {
-				changed: this.changed.slice(),
-				destroyed: this.destroyed.slice(),
-				created: this.created.slice()
-			};
-		},
 		
 		/**
 			@private
@@ -186,19 +149,15 @@
 			// to be called) and then flushes when possible unless a synchronous flush
 			// is forced?
 			
-			var models = this.models[model.kindName]
-				, created = this.created
-				, batch = this.batch;
+			var models = this.models[model.kindName];
 			
 			/*!this.has(model) && */models.add(model);
 			if (!model.headless) {
 				model.on("*", this.onModelEvent, this);
-				model.isNew && batch && created.add(model);
 			}
 			
 			if (!opts || !opts.silent) this.emit(model.ctor, "add", {model: model});
 			
-			this.isDirty = batch;
 			return this;
 		},
 		
@@ -210,21 +169,16 @@
 			if (!sync) return this._modelQueue("remove", model);
 			
 			var models = this.models[model.kindName]
-				, len = models.length
-				, created = this.created
-				, destroyed = this.destroyed
-				, batch = this.batch;
+				, len = models.length;
 				
 			models.remove(model);
 			if (models.length < len) {
-				batch && (model.isNew? created.remove(model): destroyed.add(model));
 				// we only need to remove the listener if the model isn't being removed
 				// because it was destroyed (if it is then it will remove all listeners
 				// more efficiently on its own)
 				!model.destroyed && model.off("*", this.onModelEvent, this);
 			}
 			
-			this.isDirty = batch;
 			return this;
 		},
 		
@@ -341,9 +295,6 @@
 				this.euid = "store";
 				
 				sup.apply(this, arguments);
-				this.changed = new ModelList();
-				this.destroyed = new ModelList();
-				this.created = new ModelList();
 				this.models = {"enyo.Model": new ModelList()};
 				
 				// our overloaded event emitter methods need storage for
