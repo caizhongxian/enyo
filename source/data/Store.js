@@ -2,15 +2,93 @@
 	
 	var kind = enyo.kind
 		, inherit = enyo.inherit
-		// , bind = enyo.bindSafely
-		// , filter = enyo.filter
 		, toArray = enyo.toArray
-		// , forEach = enyo.forEach
 		, mixin = enyo.mixin
-		// , isFunction = enyo.isFunction;
 		
 	var EventEmitter = enyo.EventEmitter
-		, ModelList = enyo.ModelList;
+		, ModelList = enyo.ModelList
+		, Runloop = enyo.Runloop;
+		
+	var runloop = new Runloop({
+		interval: 15,
+		
+		preprocess: {
+			add: function (props, added, queue) {
+				added[props.model.euid] = props;
+			},
+			remove: function (props, removed, queue) {
+				var added = queue.add
+					, euid = props.model.euid;
+					
+				if (added && added[euid]) delete added[euid];
+				removed[euid] = props;
+			}
+		},
+		
+		
+		flush: function () {
+			/**
+				@NOTE: Processing order is prioritized as follows...
+			
+				1. add
+				2. remove
+				3. event
+				4. remote
+				5. findLocal
+			*/
+			
+			// grab the existing queue and replace it...
+			var queue = this.reset()
+				, added = queue.add
+				, removed = queue.remove
+				
+				// @NOTE: Events for current adding/removing will not be until second pass!
+				, events = queue.event
+				, remotes = queue.remote
+				, findLocals = queue.findLocals
+				, i, ln, store, model, opts, models;
+			
+			// handling any models that were added...
+			if (added) for (i in added) {
+				ln = added[i];
+				model = ln.model;
+				opts = ln.options;
+				store = model.store;
+				models = store.models[model.kindName];
+				
+				if (!model.destroyed) {
+					// models.add(model);
+					
+					// if the model isn't headless/redundant
+					if (!model.headless) model.on("*", store.onModelEvent, store);
+					if (!opts || !opts.silent) store.emit("add", {model: model});
+				}
+			}
+			
+			// handling any models that were removed...
+			if (removed) for (i in removed) {
+				ln = removed[i];
+				model = ln.model;
+				opts = ln.options;
+				store = model.store;
+				
+				// if the model isn't destroyed we need to remove the listener otherwise
+				// the model will remove it on its own more efficiently
+				!model.destroyed && model.off("*", store.onModelEvent, store);
+			}
+			
+			// handling any events for this particular pass...
+			if (events) for (i=0; (ln=events[i]); ++i) ln();
+			
+			// handling for remote requests
+			if (remotes) for (i=0; (ln=remotes[i]); ++i) ln();
+			
+			// handling for findLocal requests
+			if (findLocals) for (i=0; (ln=findLocals[i]); ++i) ln();
+			
+			this.done();
+		}
+	});
 	
 	/**
 		@private
@@ -28,10 +106,6 @@
 		/** @lends Store.prototype */ {
 		name: "enyo.Store",
 		kind: BaseStore,
-		
-		/**
-		*/
-		queueDelay: 15,
 		
 		/**
 			@private
@@ -68,21 +142,29 @@
 		*/
 		emit: inherit(function (sup) {
 			return function (ctor, e) {
-				if (typeof ctor == "function") {
-					var listeners = this.scopeListeners(ctor, e);
-					
-					if (listeners.length) {
-						var args = toArray(arguments).slice(1);
-						args.unshift(this);
-						listeners.forEach(function (ln) {
-							ln.method.apply(ln.ctx, args);
-						});
-						return true;
-					}
-					return false;
-				}
+				var dit = this;
 				
-				return sup.apply(this, arguments);
+				runloop.add("event", function () {
+					if (typeof ctor == "function") {
+						var listeners = dit.scopeListeners(ctor, e);
+					
+						if (listeners.length) {
+							var args = toArray(arguments).slice(1);
+							args.unshift(dit);
+							listeners.forEach(function (ln) {
+								ln.method.apply(ln.ctx, args);
+							});
+							// return true;
+						}
+						// return false;
+					}
+				
+					return sup.apply(dit, arguments);
+				});
+				
+				// @TODO: This will incorrectly indicate that we had listeners for an event
+				// even if we didn't need to fix
+				return true;
 			};
 		}),
 		
@@ -135,59 +217,13 @@
 				return ln.scope === scope? !e? true: ln.event === e: false; 
 			});
 		},
-			
-		/**
-			@private
-			@method
-		*/
-		add: function (model, opts, sync) {
-			if (model.destroyed) return this;
-			if (!sync) return this._modelQueue("add", model, opts);
-			
-			// @TODO: It should be possible to have a mechanism that delays this
-			// work until a timer runs out (that is reset as long as add is continuing
-			// to be called) and then flushes when possible unless a synchronous flush
-			// is forced?
-			
-			var models = this.models[model.kindName];
-			
-			/*!this.has(model) && */models.add(model);
-			if (!model.headless) {
-				model.on("*", this.onModelEvent, this);
-			}
-			
-			if (!opts || !opts.silent) this.emit(model.ctor, "add", {model: model});
-			
-			return this;
-		},
-		
-		/**
-			@private
-			@method
-		*/
-		remove: function (model, sync) {
-			if (!sync) return this._modelQueue("remove", model);
-			
-			var models = this.models[model.kindName]
-				, len = models.length;
-				
-			models.remove(model);
-			if (models.length < len) {
-				// we only need to remove the listener if the model isn't being removed
-				// because it was destroyed (if it is then it will remove all listeners
-				// more efficiently on its own)
-				!model.destroyed && model.off("*", this.onModelEvent, this);
-			}
-			
-			return this;
-		},
 		
 		/**
 			@public
 			@method
 		*/
 		has: function (ctor, model) {
-			var models = this._flushQueue().models[ctor.prototype.kindName];
+			var models = this.models[ctor.prototype.kindName];
 			return models && models.has(model);
 		},
 		
@@ -197,6 +233,29 @@
 		*/
 		contains: function (ctor, model) {
 			return this.has(ctor, model);
+		},
+			
+		/**
+			@private
+			@method
+		*/
+		add: function (model, opts) {			
+			var models = this.models[model.kindName];
+			models.add(model);
+			runloop.add("add", {model: model, options: opts});
+			return this;
+		},
+		
+		/**
+			@private
+			@method
+		*/
+		remove: function (model, opts) {
+			var models = this.models[model.kindName];
+			models.remove(model);
+			
+			runloop.add("remove", {model: model, options: opts});
+			return this;
 		},
 		
 		/**
@@ -221,24 +280,24 @@
 			@method
 		*/
 		remote: function (action, model, opts) {
-			this._flushQueue();
+			runloop.add("remote", function () {
+				var source = opts.source || model.source
+					, name;
 			
-			var source = opts.source || model.source
-				, name;
+				if (source) {
+					if (source === true) for (name in enyo.sources) {
+						source = enyo.sources[name];
+						if (source[action]) source[action](model, opts);
+					} else if (source instanceof Array) {
+						source.forEach(function (name) {
+							var src = enyo.sources[name];
+							if (src && src[action]) src[action](models, opts);
+						});
+					} else if ((source = enyo.sources[source]) && source[action]) source[action](model, opts);
+				}
 			
-			if (source) {
-				if (source === true) for (name in enyo.sources) {
-					source = enyo.sources[name];
-					if (source[action]) source[action](model, opts);
-				} else if (source instanceof Array) {
-					source.forEach(function (name) {
-						var src = enyo.sources[name];
-						if (src && src[action]) src[action](models, opts);
-					});
-				} else if ((source = enyo.sources[source]) && source[action]) source[action](model, opts);
-			}
-			
-			// @TODO: Should this throw an error??
+				// @TODO: Should this throw an error??
+			});
 		},
 		
 		/**
@@ -246,44 +305,48 @@
 			@method
 		*/
 		find: function () {
-			this._flushQueue();
 		},
 		
 		/**
 			@public
 			@method
 		*/
-		findLocal: function (ctor, fn, ctx, opts) {
-			this._flushQueue();
+		findLocal: function (ctor, fn, ctx, opts, cb) {
+			runloop.add("findLocal", function () {
 			
-			var models = this.models[ctor.prototype.kindName]
-				, options = {all: true}
-				, found, method, ctx;
+				var models = this.models[ctor.prototype.kindName]
+					, options = {all: true}
+					, fin = cb || opts.success || opts.callback
+					, found, method, ctx;
 			
-			// in cases where the request was merely passing a constructor
-			// we assume it was asking for all of the models for that type
-			if (arguments.length == 1) return models;
+				// in cases where the request was merely passing a constructor
+				// we assume it was asking for all of the models for that type
+				if (arguments.length == 1) return models;
 			
-			// since we allow either a context and/or options hash as the
-			// third parameter we have to check to see if we have either
-			// and which is which
-			if (ctx && !ctx.kindName) opts = ctx;
-			opts = opts? mixin({}, [options, opts]): options;
+				// since we allow either a context and/or options hash as the
+				// third parameter we have to check to see if we have either
+				// and which is which
+				if (ctx && !ctx.kindName) opts = ctx;
+				opts = opts? mixin({}, [options, opts]): options;
 			
-			// and now the final check to make sure we have a context to run
-			// the method from
-			if (!ctx) ctx = opts.context || this;
+				// and now the final check to make sure we have a context to run
+				// the method from
+				if (!ctx) ctx = opts.context || this;
 			
-			method = models && (opts.all? models.filter: models.where);
+				method = models && (opts.all? models.filter: models.where);
 			
-			// otherwise we attempt to iterate over the models if they exist
-			// applying the function and passing the options along
-			found = method && method.call(models, function (ln) {
-				return fn.call(ctx, ln, opts);
+				// otherwise we attempt to iterate over the models if they exist
+				// applying the function and passing the options along
+				found = method && method.call(models, function (ln) {
+					return fn.call(ctx, ln, opts);
+				});
+			
+				// return the found model/models if any
+				// return found;
+				fin(found);
 			});
 			
-			// return the found model/models if any
-			return found;
+			return this;
 		},
 			
 		/**
@@ -301,61 +364,7 @@
 				// the listeners
 				this._scopeListeners = [];
 			};
-		}),
-		
-		/**
-			@private
-			@method
-		*/
-		_modelQueue: function (action, model, opts) {
-			var queue = this._queue || (this._queue = {add: [], remove: []});
-			
-			queue[action].push(action == "add"? {model: model, opts: opts}: model);
-			
-			!this._flushing && this._tripQueue();
-			
-			return this;
-		},
-		
-		/**
-			@private
-			@method
-		*/
-		_tripQueue: function () {
-			!this._queueId && (this._queueId = setTimeout(this._flushQueue.bind(this), this.queueDelay || 15));
-		},
-		
-		/**
-			@private
-			@method
-		*/
-		_flushQueue: function () {
-			var queue = this._queue
-				, dit = this;
-			
-			this._flushing = true;			
-			if (queue) {
-				clearTimeout(this._queueId);
-				
-				this._queue = this._queueId = null;
-				
-				queue.add.forEach(function (ln) {
-					dit.add(ln.model, ln.opts, true);
-				});
-				
-				queue.remove.forEach(function (ln) {
-					dit.remove(ln, true);
-				});
-				
-				// if somehow during this operation more models were queued
-				// we trip the queue timeout if necessary
-				this._tripQueue();
-			}
-			
-			this._flushing = false;
-			
-			return this;
-		}
+		})
 	});
 	
 	enyo.store = new Store();
