@@ -502,6 +502,9 @@
 		*/
 		onModelEvent: function (model, e) {
 			switch (e) {
+			case "change":
+				this.emit("change", {models: [model]});
+				break;
 			case "destroy":
 				this.remove(model);
 				break;
