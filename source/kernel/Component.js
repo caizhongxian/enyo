@@ -217,7 +217,8 @@ enyo.kind({
 		this.$[n] = inComponent;
 		this.notify("$." + n, null, inComponent);
 		
-		if (inComponent._public) {
+		// if the publish property is true then we expose it outside of the $ hash as well
+		if (inComponent.publish) {
 			this[n] = inComponent;
 			this.notify(n, null, inComponent);
 		}
@@ -228,7 +229,7 @@ enyo.kind({
 		var name = inComponent.getName();
 		
 		delete this.$[name];
-		if (inComponent._public) delete this[name];
+		if (inComponent.publish) delete this[name];
 	},
 	//* @public
 	/**
@@ -247,11 +248,6 @@ enyo.kind({
 		}
 		inProps.kind = inProps.kind || inProps.isa || this.defaultKind;
 		inProps.owner = inProps.owner || this;
-		
-		if (inProps.public) {
-			inProps._public = true;
-			delete inProps.public;
-		}
 	},
 	_createComponent: function(inInfo, inMoreInfo) {
 		if (!inInfo.kind && ("kind" in inInfo)) {

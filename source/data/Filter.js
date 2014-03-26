@@ -40,7 +40,7 @@
 		adjustComponentProps: inherit(function (sup) {
 			return function (props) {
 				// all filters are public...always...except when they aren't...
-				props.public !== false && (props.public = true);
+				props.publish !== false && (props.publish = true);
 				sup.apply(this, arguments);
 				if (typeof props.kind == "string") props.kind = constructorForKind(props.kind);
 				if (props.kind.prototype instanceof Filter) {
