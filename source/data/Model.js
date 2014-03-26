@@ -136,7 +136,7 @@
 				, dit = this;
 				
 			options.success = function (res) {
-				this.previous = clone(this.attributes);
+				dit.previous = clone(dit.attributes);
 				dit.onCommit(opts, res);
 				
 				if (opts && opts.success) {
