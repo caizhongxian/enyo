@@ -136,7 +136,8 @@
 				, find = opts.find
 				, sort = opts.sort
 				, commit = opts.commit
-				, create = opts.create !== false;
+				, create = opts.create !== false
+				, fin = opts.success || opts.callback;
 			
 			sort && !(typeof sort == "function") && (sort = this.comparator);
 			
@@ -227,9 +228,17 @@
 				added && this.emit("add", {/* for backward compatibility */ records: added, /* prefered */ models: added});
 			}
 			
-			commit && added && this.commit(opts);
+			// commit && added && this.commit(opts);
+			if (commit) {
+				opts.success = function () {
+					if (fin) fin(added, opts);
+				};
+				
+				this.commit(opts);
+			} else if (fin) fin(added, opts);
 			
-			return added;
+			// return added;
+			return this;
 		},
 		
 		/**
@@ -469,6 +478,8 @@
 		*/
 		onCommit: function (opts, res) {
 			this.log(opts, res);
+			
+			if (opts && opts.success) opts.success(opts, res);
 		},
 		
 		/**

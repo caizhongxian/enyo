@@ -5,6 +5,7 @@
 		, nop = enyo.nop
 		, remove = enyo.remove
 		, only = enyo.only
+		, clone = enyo.clone
 		, mixin = enyo.mixin
 		, constructorForKind = enyo.constructorForKind;
 	
@@ -64,27 +65,55 @@
 			@private
 		*/
 		commit: inherit(function (sup) {
-			return function () {
+			return function (opts) {
 				var is = this.models
-					, shouldBe = this.collection.models;
+					, dit = this
+					, shouldBe = this.collection.models
+					, options = opts? clone(opts): {};
+				
+				options.success = function () {
+					// we need to ensure we put it back to the current filtered set if necessary...
+					if (is !== shouldBe) dit.set("models", is);
+					if (opts && opts.success) opts.success.apply(null, arguments);
+				};
+				
+				options.error = function () {
+					if (is !== shouldBe) dit.set("models", is);
+					if (opts && opts.error) opts.error.apply(null, arguments);
+				};
 				
 				// facade the correct, complete models so that it will always be complete
 				// @NOTE: If ever I get my wish and have time to move us to asynchronous events (et al)
 				// this type of operation will no longer work as-is (like so many others)
 				if (is !== shouldBe) this.set("models", shouldBe, {silent: true});
-				sup.apply(this, arguments);
-				return is !== shouldBe? this.set("models", is): this;
+				// sup.apply(this, arguments);
+				sup.call(this, options);
+				return this;
 			};
 		}),
 		
 		fetch: inherit(function (sup) {
-			return function () {
+			return function (opts) {
 				var is = this.models
-					, shouldBe = this.collection.models;
+					, dit = this
+					, shouldBe = this.collection.models
+					, options = opts? clone(opts): {};
+					
+				options.success = function () {
+					// we need to ensure we put it back to the current filtered set if necessary...
+					if (is !== shouldBe) dit.set("models", is);
+					if (opts && opts.success) opts.success.apply(null, arguments);
+				};
+				
+				options.error = function () {
+					if (is !== shouldBe) dit.set("models", is);
+					if (opts && opts.error) opts.error.apply(null, arguments);
+				};
 				
 				if (is !== shouldBe) this.set("models", shouldBe, {silent: true});
-				sup.apply(this, arguments);
-				return is !== shouldBe? this.set("models", is): this;
+				// sup.apply(this, arguments);
+				sup.call(this, options);
+				return this;
 			};
 		}),
 		
@@ -143,7 +172,7 @@
 				// this is tricky at first - if as a filter we have no child filters then
 				// we want to share state with our subfilter, otherwise, we don't and will
 				// let the subkind manage the state of our models separately
-				if (!this.listeners("sync").length) this.set("models", is.models);
+				/*if (!this.listeners("sync").length) */this.set("models", is.models);
 				
 				// children filters can't listen for the reset event because their content would
 				// incorrectly update according to filter-changes but here we need them to sync
@@ -182,20 +211,31 @@
 		add: inherit(function (sup) {
 			return function (models, opts) {
 				var is = this.models
+					, dit = this
 					, collection = this.collection
 					, shouldBe = collection.models
-					, added;
+					, options = opts? clone(opts): {};
 					
-				opts || (opts = {});
-				opts.silent = true;
-				
+				options.silent = true;
+				options.success = function (added) {
+					// we do this because they were added to the underlying models container but not prepped
+					// by the collection as it would normally have been able to
+					added && added.forEach(function (model) {collection.prepareModel(model); });
+					added && dit.emit("sync", {models: shouldBe.slice()});
+					if (is !== shouldBe) dit.unsilence().set("models", is);
+					else dit.emit("add", {models: added});
+				};
 				if (is !== shouldBe) this.silence().set("models", shouldBe, {silent: true});
-				added = sup.call(this, models, opts);
-				added && added.forEach(function (model) { collection.prepareModel(model); });
-				added && this.emit("sync", {models: shouldBe.slice()});
-				if (is !== shouldBe) this.unsilence().set("models", is);
-				else this.emit("add", {models: added});
-				return added;
+				sup.call(this, models, options);
+				return this;
+				
+				
+				// added = sup.call(this, models, opts);
+				// added && added.forEach(function (model) { collection.prepareModel(model); });
+				// added && this.emit("sync", {models: shouldBe.slice()});
+				// if (is !== shouldBe) this.unsilence().set("models", is);
+				// else this.emit("add", {models: added});
+				// return added;
 			};
 		}),
 		
